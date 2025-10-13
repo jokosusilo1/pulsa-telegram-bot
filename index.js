@@ -237,6 +237,38 @@ bot.onText(/❓ BANTUAN/, (msg) => {
     });
 });
 
+// ==================== SERVER START FOR RENDER ====================
+const PORT = process.env.PORT || 3000;
+
+// Import express untuk membuat server
+const express = require('express');
+const app = express();
+
+// Basic health check endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Pulsa Telegram Bot is running!',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Health check untuk Render
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy',
+    service: 'Telegram Pulsa Bot',
+    uptime: process.uptime()
+  });
+});
+
+// Start server
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Server is running on port ${PORT}`);
+  console.log(`✅ Bot is live and ready!`);
+  console.log(`✅ Health check: https://your-app-name.onrender.com/health`);
+});
+
 // PAKET DATA COMMAND
 bot.onText(/📦 PAKET DATA/, (msg) => {
     const chatId = msg.chat.id;
