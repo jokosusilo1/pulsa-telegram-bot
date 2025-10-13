@@ -1,76 +1,3 @@
-const TelegramBot = require('node-telegram-bot-api');
-const digiflazz = require('./digiflazz');
-const express = require('express');
-const qr = require('qr-image');
-
-console.log("🤖 Starting Pulsa Telegram Bot with Complete Features...");
-
-const token = process.env.TELEGRAM_TOKEN;
-if (!token) {
-    console.log("❌ ERROR: TELEGRAM_TOKEN not set");
-    process.exit(1);
-}
-
-const bot = new TelegramBot(token, { polling: true });
-
-// Storage untuk user data
-const userStates = new Map();
-const userData = new Map();
-const userProfiles = new Map(); // Untuk data member
-const userBalances = new Map(); // Untuk saldo member
-
-// PRODUCT MAP UNTUK SEMUA KATEGORI
-const productMap = {
-    // PULSA
-    pulsa: {
-        'telkomsel_5k': { code: 'Tkl5', name: 'Telkomsel 5.000', price: 6000, category: 'pulsa' },
-        'telkomsel_10k': { code: 'Tkl10', name: 'Telkomsel 10.000', price: 11000, category: 'pulsa' },
-        'telkomsel_25k': { code: 'Tkl25', name: 'Telkomsel 25.000', price: 26000, category: 'pulsa' },
-        'telkomsel_50k': { code: 'Tkl50', name: 'Telkomsel 50.000', price: 51000, category: 'pulsa' },
-        'telkomsel_100k': { code: 'Tkl100', name: 'Telkomsel 100.000', price: 101000, category: 'pulsa' },
-        
-        'indosat_5k': { code: 'IND5', name: 'Indosat 5.000', price: 6000, category: 'pulsa' },
-        'indosat_10k': { code: 'IND10', name: 'Indosat 10.000', price: 11000, category: 'pulsa' },
-        'indosat_25k': { code: 'IND25', name: 'Indosat 25.000', price: 26000, category: 'pulsa' },
-        'indosat_50k': { code: 'IND50', name: 'Indosat 50.000', price: 51000, category: 'pulsa' },
-        'indosat_100k': { code: 'IND100', name: 'Indosat 100.000', price: 101000, category: 'pulsa' },
-        
-        'xl_5k': { code: 'X5', name: 'XL 5.000', price: 6000, category: 'pulsa' },
-        'xl_10k': { code: 'X10', name: 'XL 10.000', price: 11000, category: 'pulsa' },
-        'xl_25k': { code: 'X25', name: 'XL 25.000', price: 26000, category: 'pulsa' },
-        'xl_50k': { code: 'X50', name: 'XL 50.000', price: 51000, category: 'pulsa' },
-        'xl_100k': { code: 'X100', name: 'XL 100.000', price: 101000, category: 'pulsa' },
-        
-        'axis_5k': { code: 'Ax5', name: 'Axis 5.000', price: 6000, category: 'pulsa' },
-        'axis_10k': { code: 'Ax10', name: 'Axis 10.000', price: 11000, category: 'pulsa' },
-        'axis_25k': { code: 'Ax25', name: 'Axis 25.000', price: 26000, category: 'pulsa' },
-        'axis_50k': { code: 'Ax50', name: 'Axis 50.000', price: 51000, category: 'pulsa' },
-        'axis_100k': { code: 'Ax100', name: 'Axis 100.000', price: 101000, category: 'pulsa' }
-    },
-
-    // PAKET DATA
-    data: {
-        'telkomsel_1gb': { code: 'S1', name: 'Telkomsel 1GB', price: 10000, category: 'data', validity: '1 Hari' },
-        'telkomsel_3gb': { code: 'S3', name: 'Telkomsel 3GB', price: 25000, category: 'data', validity: '3 Hari' },
-        'telkomsel_5gb': { code: 'S5', name: 'Telkomsel 5GB', price: 40000, category: 'data', validity: '7 Hari' },
-        
-        'indosat_1gb': { code: 'I1', name: 'Indosat 1GB', price: 9000, category: 'data', validity: '1 Hari' },
-        'indosat_3gb': { code: 'I3', name: 'Indosat 3GB', price: 23000, category: 'data', validity: '3 Hari' },
-        
-        'xl_1gb': { code: 'X1', name: 'XL 1GB', price: 9500, category: 'data', validity: '1 Hari' },
-        'xl_3gb': { code: 'X3', name: 'XL 3GB', price: 24000, category: 'data', validity: '3 Hari' }
-    },
-
-    // GAMES
-    games: {
-        'mobile_legends_100': { code: 'ML100', name: 'Mobile Legends 100 Diamond', price: 28000, category: 'games' },
-        'mobile_legends_250': { code: 'ML250', name: 'Mobile Legends 250 Diamond', price: 65000, category: 'games' },
-        'free_fire_100': { code: 'FF100', name: 'Free Fire 100 Diamond', price: 15000, category: 'games' },
-        'free_fire_300': { code: 'FF300', name: 'Free Fire 300 Diamond', price: 42000, category: 'games' },
-        'pubg_100': { code: 'PUBG100', name: 'PUBG Mobile 100 UC', price: 25000, category: 'games' }
-    },
-
-    // E-WALLET
     ewallet: {
         'gopay_10k': { code: 'GOPAY10', name: 'Gopay 10.000', price: 10500, category: 'ewallet' },
         'gopay_25k': { code: 'GOPAY25', name: 'Gopay 25.000', price: 25800, category: 'ewallet' },
@@ -140,29 +67,6 @@ bot.onText(/\/start/, (msg) => {
                           `Halo *${escapeMarkdown(msg.from.first_name)}*! 👋\n\n` +
                           `Saya siap melayani kebutuhan pulsa, paket data, game, dan lainnya.\n\n` +
                           `*💡 Fitur yang tersedia:*\n` +
-                          `• 📱 Pulsa & Data\n` +
-                          `• 🎮 Voucher Game\n` +
-                          `• 💳 E-Wallet\n` +
-                          `• 💡 Token PLN\n` +
-                          `• 💰 Deposit Saldo\n` +
-                          `• 📊 Cek Harga Real-time\n\n` +
-                          `Pilih menu di bawah untuk memulai:`;
-    
-    bot.sendMessage(chatId, welcomeMessage, {
-        parse_mode: 'Markdown',
-        reply_markup: {
-            keyboard: [
-                ['📋 PENDAFTARAN', '💰 DEPOSIT'],
-                ['🛒 BELI PULSA', '📦 PAKET DATA', '🎮 GAMES'],
-                ['💳 E-WALLET', '💡 PLN', '📊 CEK HARGA'],
-                ['💼 CEK SALDO', '👤 PROFIL', '❓ BANTUAN']
-            ],
-            resize_keyboard: true
-        }
-    });
-});
-
-// PENDAFTARAN MEMBER
 bot.onText(/📋 PENDAFTARAN/, (msg) => {
     const chatId = msg.chat.id;
     const profile = userProfiles.get(chatId);
@@ -186,7 +90,6 @@ bot.onText(/📋 PENDAFTARAN/, (msg) => {
                           `1. Masukkan nomor telepon Anda:\n` +
                           `Contoh: 081234567890`, {
         parse_mode: 'Markdown',
-        reply_markup: {
             keyboard: [['🚫 BATALKAN']],
             resize_keyboard: true
         }
