@@ -67,6 +67,7 @@ bot.onText(/\/start/, (msg) => {
 });
 
 // CEK HARGA REAL dari Digiflazz - FIXED VERSION
+// CEK HARGA REAL - FIXED VERSION BERDASARKAN STRUKTUR DATA AKTUAL
 bot.onText(/📊 CEK HARGA REAL/, async (msg) => {
     const chatId = msg.chat.id;
     
@@ -75,54 +76,76 @@ bot.onText(/📊 CEK HARGA REAL/, async (msg) => {
     try {
         const prices = await digiflazz.getPriceList();
         
-        console.log('🔍 Full Digiflazz Response:', JSON.stringify(prices, null, 2));
+        console.log('🔍 DEBUG - Full response:', JSON.stringify(prices, null, 2));
         
-        if (prices && prices.success) {
-            // ✅ FIX: Handle berbagai format response Digiflazz
-            let pulseProducts = [];
+        if (prices && prices.success && prices.data) {
+            let productsToShow = [];
             
+            // CASE 1: Data adalah array langsung
             if (Array.isArray(prices.data)) {
-                pulseProducts = prices.data
-                    .filter(p => p && (p.category === 'pulsa' || p.type === 'pulsa'))
-                    .slice(0, 15);
-            } else if (prices.data && typeof prices.data === 'object') {
-                // Jika data berupa object, convert ke array
-                pulseProducts = Object.values(prices.data)
-                    .filter(p => p && (p.category === 'pulsa' || p.type === 'pulsa'))
-                    .slice(0, 15);
+                console.log('✅ Data format: Array, length:', prices.data.length);
+                
+                // ✅ FILTER YANG SESUAI DENGAN DATA AKTUAL
+                productsToShow = prices.data
+                    .filter(p => p && 
+                        p.category && 
+                        p.category.toLowerCase().includes('pulsa') && // Lebih fleksibel
+                        p.buyer_product_status === true &&           // Hanya produk aktif
+                        p.price && p.price > 0                       // Harga valid
+                    )
+                    .slice(0, 10); // Ambil 10 pertama
+            }
+            // CASE 2: Data adalah object (backup plan)
+            else if (prices.data && typeof prices.data === 'object') {
+                console.log('🔄 Data format: Object, converting to array');
+                productsToShow = Object.values(prices.data)
+                    .filter(p => p && typeof p === 'object')
+                    .slice(0, 10);
             }
             
-            console.log('🔍 Filtered Products:', pulseProducts);
+            console.log('🔍 Products after filter:', productsToShow.length);
             
-            if (pulseProducts.length > 0) {
+            if (productsToShow.length > 0) {
                 let message = '📋 **DAFTAR HARGA PULSA REAL**\n\n';
                 
-                pulseProducts.forEach((product, index) => {
-                    const productName = product.product_name || product.name || product.product_name_prepaid || 'Unknown Product';
-                    const price = product.price || product.seller_price || 0;
-                    const brand = product.brand || product.operator || 'Unknown';
+                productsToShow.forEach((product, index) => {
+                    // ✅ FIELD NAMES SESUAI DATA AKTUAL DARI DIGIFLAZZ
+                    const productName = product.product_name || 'Unknown Product';
+                    const price = product.price || 0;
+                    const brand = product.brand || 'Unknown';
+                    const sku = product.buyer_sku_code || 'N/A';
+                    const stock = product.stock;
                     
-                    message += `📱 ${productName}\n💵 Rp ${price.toLocaleString()}\n🏷️ ${brand}\n`;
+                    message += `📱 **${productName}**\n`;
+                    message += `💵 Harga: Rp ${price.toLocaleString()}\n`;
+                    message += `🏷️ Operator: ${brand}\n`;
+                    message += `🆔 SKU: ${sku}\n`;
                     
-                    if (index < pulseProducts.length - 1) message += '\n';
+                    // Tampilkan status stok jika ada
+                    if (stock !== undefined) {
+                        message += `📦 Stok: ${stock}\n`;
+                    }
+                    
+                    if (index < productsToShow.length - 1) {
+                        message += '\n' + '─'.repeat(25) + '\n\n';
+                    }
                 });
                 
-                message += '\n_Data real-time dari Digiflazz_';
+                message += `\n_Total: ${productsToShow.length} produk_`;
                 
                 await bot.editMessageText(message, {
                     chat_id: chatId,
                     message_id: loadingMsg.message_id,
                     parse_mode: 'Markdown'
                 });
+                
             } else {
-                await bot.editMessageText('❌ Tidak ada produk pulsa ditemukan dalam response\n\nCoba cek struktur data Digiflazz.', {
-                    chat_id: chatId,
-                    message_id: loadingMsg.message_id
-                });
+                // Fallback: tampilkan data mentah untuk debug
+                await showRawDataFallback(chatId, loadingMsg.message_id, prices);
             }
         } else {
-            const errorMsg = prices?.error?.message || prices?.message || 'Unknown error';
-            await bot.editMessageText(`❌ Response tidak valid dari Digiflazz:\n${errorMsg}`, {
+            const errorMsg = prices?.error?.message || prices?.error || 'Unknown error';
+            await bot.editMessageText(`❌ Gagal mengambil harga:\n${errorMsg}`, {
                 chat_id: chatId,
                 message_id: loadingMsg.message_id
             });
@@ -136,6 +159,27 @@ bot.onText(/📊 CEK HARGA REAL/, async (msg) => {
     }
 });
 
+// Helper function untuk fallback
+async function showRawDataFallback(chatId, messageId, prices) {
+    let rawData = 'No data';
+    if (prices && prices.data && Array.isArray(prices.data) && prices.data.length > 0) {
+        rawData = JSON.stringify(prices.data[0], null, 2);
+    }
+    
+    await bot.editMessageText(
+        `❌ Tidak ada produk yang lolos filter.\n\n` +
+        `📝 **Data sample:**\n\`\`\`json\n${rawData.substring(0, 1000)}\n\`\`\`\n\n` +
+        `💡 **Solusi:**\n` +
+        `• Cek struktur data di log\n` +
+        `• Gunakan /debugstructure\n` +
+        `• Adjust filter criteria`,
+        {
+            chat_id: chatId,
+            message_id: messageId,
+            parse_mode: 'Markdown'
+        }
+    );
+}
 // CEK SALDO DIGIFLAZZ
 bot.onText(/💳 CEK SALDO/, async (msg) => {
     const chatId = msg.chat.id;
@@ -380,7 +424,59 @@ bot.onText(/❓ BANTUAN/, (msg) => {
         parse_mode: 'Markdown'
     });
 });
-
+// DEBUG STRUCTURE COMMAND
+bot.onText(/\/debugstructure/, async (msg) => {
+    const chatId = msg.chat.id;
+    
+    const loadingMsg = await bot.sendMessage(chatId, '🔍 Menganalisis struktur data Digiflazz...');
+    
+    try {
+        const prices = await digiflazz.getPriceList();
+        
+        let debugMessage = '🔧 **STRUKTUR DATA DIGIFLAZZ**\n\n';
+        
+        if (prices && prices.success && prices.data) {
+            debugMessage += `✅ Success: ${prices.success}\n`;
+            debugMessage += `📊 Data Type: ${typeof prices.data}\n`;
+            
+            if (Array.isArray(prices.data)) {
+                debugMessage += `🔢 Array Length: ${prices.data.length}\n\n`;
+                
+                if (prices.data.length > 0) {
+                    const sample = prices.data[0];
+                    debugMessage += `📝 **SAMPLE PRODUCT STRUCTURE:**\n\`\`\`json\n${JSON.stringify(sample, null, 2).substring(0, 1500)}\n\`\`\`\n\n`;
+                    
+                    // Analisis field yang ada
+                    debugMessage += `🔍 **FIELD ANALYSIS:**\n`;
+                    const fields = Object.keys(sample);
+                    fields.forEach(field => {
+                        debugMessage += `• ${field}: ${typeof sample[field]} = ${JSON.stringify(sample[field]).substring(0, 50)}\n`;
+                    });
+                }
+            } else if (typeof prices.data === 'object') {
+                debugMessage += `🔢 Object Keys: ${Object.keys(prices.data).length}\n\n`;
+                const firstKey = Object.keys(prices.data)[0];
+                if (firstKey) {
+                    debugMessage += `📝 **SAMPLE STRUCTURE:**\n\`\`\`json\n${JSON.stringify(prices.data[firstKey], null, 2).substring(0, 1500)}\n\`\`\``;
+                }
+            }
+        } else {
+            debugMessage += `❌ Invalid response: ${JSON.stringify(prices)}`;
+        }
+        
+        await bot.editMessageText(debugMessage, {
+            chat_id: chatId,
+            message_id: loadingMsg.message_id,
+            parse_mode: 'Markdown'
+        });
+        
+    } catch (error) {
+        await bot.editMessageText(`❌ Error: ${error.message}`, {
+            chat_id: chatId,
+            message_id: loadingMsg.message_id
+        });
+    }
+});
 // PAKET DATA COMMAND
 bot.onText(/📦 PAKET DATA/, (msg) => {
     const chatId = msg.chat.id;
