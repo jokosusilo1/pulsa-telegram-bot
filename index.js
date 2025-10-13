@@ -1,8 +1,9 @@
 const TelegramBot = require('node-telegram-bot-api');
 const digiflazz = require('./digiflazz');
 const express = require('express');
+const qr = require('qr-image');
 
-console.log("🤖 Starting Pulsa Telegram Bot with Custom SKUs...");
+console.log("🤖 Starting Pulsa Telegram Bot with Complete Features...");
 
 const token = process.env.TELEGRAM_TOKEN;
 if (!token) {
@@ -11,64 +12,298 @@ if (!token) {
 }
 
 const bot = new TelegramBot(token, { polling: true });
+
+// Storage untuk user data
 const userStates = new Map();
 const userData = new Map();
+const userProfiles = new Map(); // Untuk data member
+const userBalances = new Map(); // Untuk saldo member
 
-// PRODUCT MAP DENGAN SKU CUSTOM ANDA
+// PRODUCT MAP UNTUK SEMUA KATEGORI
 const productMap = {
-    // TELKOMSEL - menggunakan Tkl
-    'telkomsel_5k': { code: 'Tkl5', name: 'Telkomsel 5.000', price: 6000 },
-    'telkomsel_10k': { code: 'Tkl10', name: 'Telkomsel 10.000', price: 11000 },
-    'telkomsel_25k': { code: 'Tkl25', name: 'Telkomsel 25.000', price: 26000 },
-    'telkomsel_50k': { code: 'Tkl50', name: 'Telkomsel 50.000', price: 51000 },
-    'telkomsel_100k': { code: 'Tkl100', name: 'Telkomsel 100.000', price: 101000 },
-    
-    // INDOSAT - menggunakan IND
-    'indosat_5k': { code: 'IND5', name: 'Indosat 5.000', price: 6000 },
-    'indosat_10k': { code: 'IND10', name: 'Indosat 10.000', price: 11000 },
-    'indosat_25k': { code: 'IND25', name: 'Indosat 25.000', price: 26000 },
-    'indosat_50k': { code: 'IND50', name: 'Indosat 50.000', price: 51000 },
-    'indosat_100k': { code: 'IND100', name: 'Indosat 100.000', price: 101000 },
-    
-    // XL - menggunakan X
-    'xl_5k': { code: 'X5', name: 'XL 5.000', price: 6000 },
-    'xl_10k': { code: 'X10', name: 'XL 10.000', price: 11000 },
-    'xl_25k': { code: 'X25', name: 'XL 25.000', price: 26000 },
-    'xl_50k': { code: 'X50', name: 'XL 50.000', price: 51000 },
-    'xl_100k': { code: 'X100', name: 'XL 100.000', price: 101000 },
-    
-    // AXIS - menggunakan Ax
-    'axis_5k': { code: 'Ax5', name: 'Axis 5.000', price: 6000 },
-    'axis_10k': { code: 'Ax10', name: 'Axis 10.000', price: 11000 },
-    'axis_25k': { code: 'Ax25', name: 'Axis 25.000', price: 26000 },
-    'axis_50k': { code: 'Ax50', name: 'Axis 50.000', price: 51000 },
-    'axis_100k': { code: 'Ax100', name: 'Axis 100.000', price: 101000 }
+    // PULSA
+    pulsa: {
+        'telkomsel_5k': { code: 'Tkl5', name: 'Telkomsel 5.000', price: 6000, category: 'pulsa' },
+        'telkomsel_10k': { code: 'Tkl10', name: 'Telkomsel 10.000', price: 11000, category: 'pulsa' },
+        'telkomsel_25k': { code: 'Tkl25', name: 'Telkomsel 25.000', price: 26000, category: 'pulsa' },
+        'telkomsel_50k': { code: 'Tkl50', name: 'Telkomsel 50.000', price: 51000, category: 'pulsa' },
+        'telkomsel_100k': { code: 'Tkl100', name: 'Telkomsel 100.000', price: 101000, category: 'pulsa' },
+        
+        'indosat_5k': { code: 'IND5', name: 'Indosat 5.000', price: 6000, category: 'pulsa' },
+        'indosat_10k': { code: 'IND10', name: 'Indosat 10.000', price: 11000, category: 'pulsa' },
+        'indosat_25k': { code: 'IND25', name: 'Indosat 25.000', price: 26000, category: 'pulsa' },
+        'indosat_50k': { code: 'IND50', name: 'Indosat 50.000', price: 51000, category: 'pulsa' },
+        'indosat_100k': { code: 'IND100', name: 'Indosat 100.000', price: 101000, category: 'pulsa' },
+        
+        'xl_5k': { code: 'X5', name: 'XL 5.000', price: 6000, category: 'pulsa' },
+        'xl_10k': { code: 'X10', name: 'XL 10.000', price: 11000, category: 'pulsa' },
+        'xl_25k': { code: 'X25', name: 'XL 25.000', price: 26000, category: 'pulsa' },
+        'xl_50k': { code: 'X50', name: 'XL 50.000', price: 51000, category: 'pulsa' },
+        'xl_100k': { code: 'X100', name: 'XL 100.000', price: 101000, category: 'pulsa' },
+        
+        'axis_5k': { code: 'Ax5', name: 'Axis 5.000', price: 6000, category: 'pulsa' },
+        'axis_10k': { code: 'Ax10', name: 'Axis 10.000', price: 11000, category: 'pulsa' },
+        'axis_25k': { code: 'Ax25', name: 'Axis 25.000', price: 26000, category: 'pulsa' },
+        'axis_50k': { code: 'Ax50', name: 'Axis 50.000', price: 51000, category: 'pulsa' },
+        'axis_100k': { code: 'Ax100', name: 'Axis 100.000', price: 101000, category: 'pulsa' }
+    },
+
+    // PAKET DATA
+    data: {
+        'telkomsel_1gb': { code: 'S1', name: 'Telkomsel 1GB', price: 10000, category: 'data', validity: '1 Hari' },
+        'telkomsel_3gb': { code: 'S3', name: 'Telkomsel 3GB', price: 25000, category: 'data', validity: '3 Hari' },
+        'telkomsel_5gb': { code: 'S5', name: 'Telkomsel 5GB', price: 40000, category: 'data', validity: '7 Hari' },
+        
+        'indosat_1gb': { code: 'I1', name: 'Indosat 1GB', price: 9000, category: 'data', validity: '1 Hari' },
+        'indosat_3gb': { code: 'I3', name: 'Indosat 3GB', price: 23000, category: 'data', validity: '3 Hari' },
+        
+        'xl_1gb': { code: 'X1', name: 'XL 1GB', price: 9500, category: 'data', validity: '1 Hari' },
+        'xl_3gb': { code: 'X3', name: 'XL 3GB', price: 24000, category: 'data', validity: '3 Hari' }
+    },
+
+    // GAMES
+    games: {
+        'mobile_legends_100': { code: 'ML100', name: 'Mobile Legends 100 Diamond', price: 28000, category: 'games' },
+        'mobile_legends_250': { code: 'ML250', name: 'Mobile Legends 250 Diamond', price: 65000, category: 'games' },
+        'free_fire_100': { code: 'FF100', name: 'Free Fire 100 Diamond', price: 15000, category: 'games' },
+        'free_fire_300': { code: 'FF300', name: 'Free Fire 300 Diamond', price: 42000, category: 'games' },
+        'pubg_100': { code: 'PUBG100', name: 'PUBG Mobile 100 UC', price: 25000, category: 'games' }
+    },
+
+    // E-WALLET
+    ewallet: {
+        'gopay_10k': { code: 'GOPAY10', name: 'Gopay 10.000', price: 10500, category: 'ewallet' },
+        'gopay_25k': { code: 'GOPAY25', name: 'Gopay 25.000', price: 25800, category: 'ewallet' },
+        'gopay_50k': { code: 'GOPAY50', name: 'Gopay 50.000', price: 50800, category: 'ewallet' },
+        'ovo_10k': { code: 'OVO10', name: 'OVO 10.000', price: 10600, category: 'ewallet' },
+        'ovo_25k': { code: 'OVO25', name: 'OVO 25.000', price: 25900, category: 'ewallet' },
+        'dana_10k': { code: 'DANA10', name: 'DANA 10.000', price: 10400, category: 'ewallet' }
+    },
+
+    // PLN
+    pln: {
+        'pln_20k': { code: 'PLN20', name: 'Token PLN 20.000', price: 20500, category: 'pln' },
+        'pln_50k': { code: 'PLN50', name: 'Token PLN 50.000', price: 50500, category: 'pln' },
+        'pln_100k': { code: 'PLN100', name: 'Token PLN 100.000', price: 100500, category: 'pln' },
+        'pln_200k': { code: 'PLN200', name: 'Token PLN 200.000', price: 200500, category: 'pln' }
+    }
 };
 
-console.log("✅ Bot initialized with custom SKUs");
+// Fungsi helper
+function escapeMarkdown(text) {
+    if (typeof text !== 'string') return String(text);
+    return text.replace(/([_*[\]()~`>#+\-=|{}.!])/g, '\\$1');
+}
+
+function getCurrentBalance(chatId) {
+    return userBalances.get(chatId) || 0;
+}
+
+function addBalance(chatId, amount) {
+    const current = getCurrentBalance(chatId);
+    userBalances.set(chatId, current + amount);
+    return current + amount;
+}
+
+function deductBalance(chatId, amount) {
+    const current = getCurrentBalance(chatId);
+    if (current < amount) return false;
+    userBalances.set(chatId, current - amount);
+    return true;
+}
+
+console.log("✅ Bot initialized with complete features");
 
 // ==================== BOT COMMANDS ====================
 
+// START COMMAND - MENU UTAMA
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    
+    // Auto register user jika belum terdaftar
+    if (!userProfiles.has(chatId)) {
+        userProfiles.set(chatId, {
+            id: userId,
+            name: `${msg.from.first_name} ${msg.from.last_name || ''}`.trim(),
+            username: msg.from.username || '',
+            phone: '',
+            registered: false,
+            joinDate: new Date()
+        });
+        userBalances.set(chatId, 0);
+    }
+    
     userStates.set(chatId, 'main_menu');
     
-    bot.sendMessage(chatId, `🤖 **TOKO PULSA DIGIFLAZZ**\n\nSelamat datang! Saya siap melayani pembelian pulsa dan paket data Anda.\n\nPilih menu di bawah:`, {
+    const welcomeMessage = `🤖 **SELAMAT DATANG DI TOKO PULSA DIGIFLAZZ**\n\n` +
+                          `Halo *${escapeMarkdown(msg.from.first_name)}*! 👋\n\n` +
+                          `Saya siap melayani kebutuhan pulsa, paket data, game, dan lainnya.\n\n` +
+                          `*💡 Fitur yang tersedia:*\n` +
+                          `• 📱 Pulsa & Data\n` +
+                          `• 🎮 Voucher Game\n` +
+                          `• 💳 E-Wallet\n` +
+                          `• 💡 Token PLN\n` +
+                          `• 💰 Deposit Saldo\n` +
+                          `• 📊 Cek Harga Real-time\n\n` +
+                          `Pilih menu di bawah untuk memulai:`;
+    
+    bot.sendMessage(chatId, welcomeMessage, {
         parse_mode: 'Markdown',
         reply_markup: {
             keyboard: [
-                ['🛒 BELI PULSA', '📦 PAKET DATA'],
-                ['📊 CEK HARGA REAL', '👤 PROFIL'],
-                ['💳 CEK SALDO', '❓ BANTUAN']
+                ['📋 PENDAFTARAN', '💰 DEPOSIT'],
+                ['🛒 BELI PULSA', '📦 PAKET DATA', '🎮 GAMES'],
+                ['💳 E-WALLET', '💡 PLN', '📊 CEK HARGA'],
+                ['💼 CEK SALDO', '👤 PROFIL', '❓ BANTUAN']
             ],
             resize_keyboard: true
         }
     });
 });
 
-// CEK HARGA REAL dari Digiflazz - FIXED VERSION
-// CEK HARGA REAL - FIXED VERSION BERDASARKAN STRUKTUR DATA AKTUAL
-bot.onText(/📊 CEK HARGA REAL/, async (msg) => {
+// PENDAFTARAN MEMBER
+bot.onText(/📋 PENDAFTARAN/, (msg) => {
+    const chatId = msg.chat.id;
+    const profile = userProfiles.get(chatId);
+    
+    if (profile && profile.registered) {
+        bot.sendMessage(chatId, `✅ *ANDA SUDAH TERDAFTAR SEBAGAI MEMBER*\n\n` +
+                              `📛 Nama: ${profile.name}\n` +
+                              `📞 Telepon: ${profile.phone || 'Belum diisi'}\n` +
+                              `📅 Bergabung: ${profile.joinDate.toLocaleDateString('id-ID')}\n\n` +
+                              `Untuk mengubah data, hubungi admin.`, {
+            parse_mode: 'Markdown'
+        });
+        return;
+    }
+    
+    userStates.set(chatId, 'registration_phone');
+    userData.set(chatId, { step: 'phone' });
+    
+    bot.sendMessage(chatId, `📝 *FORM PENDAFTARAN MEMBER*\n\n` +
+                          `Silakan lengkapi data diri Anda:\n\n` +
+                          `1. Masukkan nomor telepon Anda:\n` +
+                          `Contoh: 081234567890`, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+            keyboard: [['🚫 BATALKAN']],
+            resize_keyboard: true
+        }
+    });
+});
+
+// DEPOSIT SALDO
+bot.onText(/💰 DEPOSIT/, (msg) => {
+    const chatId = msg.chat.id;
+    userStates.set(chatId, 'deposit_amount');
+    
+    const currentBalance = getCurrentBalance(chatId);
+    
+    bot.sendMessage(chatId, `💰 *DEPOSIT SALDO*\n\n` +
+                          `Saldo Anda saat ini: *Rp ${currentBalance.toLocaleString()}*\n\n` +
+                          `Masukkan nominal deposit (minimal Rp 10.000):\n` +
+                          `Contoh: 50000`, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+            keyboard: [
+                ['10000', '50000', '100000'],
+                ['200000', '500000', '🚫 BATALKAN']
+            ],
+            resize_keyboard: true
+        }
+    });
+});
+
+// CEK SALDO MEMBER
+bot.onText(/💼 CEK SALDO/, (msg) => {
+    const chatId = msg.chat.id;
+    const balance = getCurrentBalance(chatId);
+    const profile = userProfiles.get(chatId);
+    
+    let message = `💰 *SALDO ANDA*\n\n`;
+    message += `💵 Saldo: *Rp ${balance.toLocaleString()}*\n`;
+    
+    if (balance === 0) {
+        message += `\n⚠️ Saldo Anda kosong. Lakukan deposit untuk bisa bertransaksi.\n`;
+        message += `Gunakan menu *💰 DEPOSIT* untuk top up saldo.`;
+    } else if (balance < 10000) {
+        message += `\n💡 Saldo Anda hampir habis. Disarankan untuk deposit ulang.`;
+    } else {
+        message += `\n✅ Saldo mencukupi untuk transaksi.`;
+    }
+    
+    message += `\n\n📊 *STATISTIK:*\n`;
+    message += `• Member: ${profile?.registered ? '✅ Terdaftar' : '❌ Belum'}\n`;
+    message += `• Bergabung: ${profile?.joinDate.toLocaleDateString('id-ID') || 'N/A'}`;
+    
+    bot.sendMessage(chatId, message, {
+        parse_mode: 'Markdown'
+    });
+});
+
+// PROFIL USER
+bot.onText(/👤 PROFIL/, (msg) => {
+    const chatId = msg.chat.id;
+    const profile = userProfiles.get(chatId);
+    const balance = getCurrentBalance(chatId);
+    
+    if (!profile) {
+        bot.sendMessage(chatId, '❌ Profil tidak ditemukan. Gunakan /start untuk mendaftar.');
+        return;
+    }
+    
+    const profileMessage = `👤 *PROFIL MEMBER*\n\n` +
+                          `🆔 ID: ${profile.id}\n` +
+                          `📛 Nama: ${profile.name}\n` +
+                          `📞 Telepon: ${profile.phone || 'Belum diisi'}\n` +
+                          `🤖 Username: @${profile.username || 'Tidak ada'}\n\n` +
+                          `💰 Saldo: Rp ${balance.toLocaleString()}\n` +
+                          `📅 Bergabung: ${profile.joinDate.toLocaleDateString('id-ID')}\n` +
+                          `✅ Status: ${profile.registered ? 'Member Terdaftar' : 'Belum Lengkap'}\n\n` +
+                          `💡 *Tips:*\n` +
+                          `• Gunakan menu 📋 PENDAFTARAN untuk melengkapi data\n` +
+                          `• Gunakan menu 💰 DEPOSIT untuk top up saldo`;
+    
+    bot.sendMessage(chatId, profileMessage, {
+        parse_mode: 'Markdown'
+    });
+});
+
+// BANTUAN
+bot.onText(/❓ BANTUAN/, (msg) => {
+    const chatId = msg.chat.id;
+    
+    const helpMessage = `❓ *BANTUAN & PANDUAN*\n\n` +
+                       `*📋 CARA PENGGUNAAN:*\n` +
+                       `1. *Pendaftaran*: Isi data diri terlebih dahulu\n` +
+                       `2. *Deposit*: Top up saldo member\n` +
+                       `3. *Beli*: Pilih produk yang diinginkan\n` +
+                       `4. *Bayar*: Gunakan saldo member\n\n` +
+                       `*💰 DEPOSIT:*\n` +
+                       `• Minimal: Rp 10.000\n` +
+                       `• Metode: QRIS, Transfer Bank\n` +
+                       `• Proses: Instan (1-5 menit)\n\n` +
+                       `*🛒 PEMBELIAN:*\n` +
+                       `• Pulsa & Data: Semua operator\n` +
+                       `• Games: Mobile Legends, Free Fire, dll\n` +
+                       `• E-Wallet: Gopay, OVO, DANA\n` +
+                       `• PLN: Token listrik\n\n` +
+                       `*📞 SUPPORT:*\n` +
+                       `• Admin: @username_admin\n` +
+                       `• WhatsApp: 08xxxxxxxxxx\n\n` +
+                       `*⚠️ TROUBLESHOOTING:*\n` +
+                       `• Transaksi gagal? Cek saldo & coba lagi\n` +
+                       `• Saldo tidak bertambah? Hubungi admin\n` +
+                       `• Produk tidak ada? Cek harga terbaru`;
+    
+    bot.sendMessage(chatId, helpMessage, {
+        parse_mode: 'Markdown'
+    });
+});
+
+// CEK HARGA REAL (dari Digiflazz)
+bot.onText(/📊 CEK HARGA/, async (msg) => {
     const chatId = msg.chat.id;
     
     const loadingMsg = await bot.sendMessage(chatId, '🔄 Mengambil daftar harga terbaru dari Digiflazz...');
@@ -76,171 +311,110 @@ bot.onText(/📊 CEK HARGA REAL/, async (msg) => {
     try {
         const prices = await digiflazz.getPriceList();
         
-        console.log('🔍 DEBUG - Full response:', JSON.stringify(prices, null, 2));
-        
-        if (prices && prices.success && prices.data) {
-            let productsToShow = [];
+        if (prices && prices.success && prices.data && Array.isArray(prices.data)) {
+            // Filter produk pulsa saja untuk ditampilkan
+            const pulseProducts = prices.data
+                .filter(p => p && p.category && p.category.toLowerCase().includes('pulsa'))
+                .slice(0, 8);
             
-            // CASE 1: Data adalah array langsung
-            if (Array.isArray(prices.data)) {
-                console.log('✅ Data format: Array, length:', prices.data.length);
+            if (pulseProducts.length > 0) {
+                let message = '📋 *DAFTAR HARGA PULSA TERBARU*\n\n';
                 
-                // ✅ FILTER YANG SESUAI DENGAN DATA AKTUAL
-                productsToShow = prices.data
-                    .filter(p => p && 
-                        p.category && 
-                        p.category.toLowerCase().includes('pulsa') && // Lebih fleksibel
-                        p.buyer_product_status === true &&           // Hanya produk aktif
-                        p.price && p.price > 0                       // Harga valid
-                    )
-                    .slice(0, 10); // Ambil 10 pertama
-            }
-            // CASE 2: Data adalah object (backup plan)
-            else if (prices.data && typeof prices.data === 'object') {
-                console.log('🔄 Data format: Object, converting to array');
-                productsToShow = Object.values(prices.data)
-                    .filter(p => p && typeof p === 'object')
-                    .slice(0, 10);
-            }
-            
-            console.log('🔍 Products after filter:', productsToShow.length);
-            
-            if (productsToShow.length > 0) {
-                let message = '📋 **DAFTAR HARGA PULSA REAL**\n\n';
-                
-                productsToShow.forEach((product, index) => {
-                    // ✅ FIELD NAMES SESUAI DATA AKTUAL DARI DIGIFLAZZ
-                    const productName = product.product_name || 'Unknown Product';
+                pulseProducts.forEach((product, index) => {
+                    const name = escapeMarkdown(product.product_name || 'Unknown');
                     const price = product.price || 0;
-                    const brand = product.brand || 'Unknown';
-                    const sku = product.buyer_sku_code || 'N/A';
-                    const stock = product.stock;
+                    const brand = escapeMarkdown(product.brand || 'Unknown');
                     
-                    message += `📱 **${productName}**\n`;
-                    message += `💵 Harga: Rp ${price.toLocaleString()}\n`;
-                    message += `🏷️ Operator: ${brand}\n`;
-                    message += `🆔 SKU: ${sku}\n`;
+                    message += `📱 *${name}*\n`;
+                    message += `💵 Rp ${price.toLocaleString()}\n`;
+                    message += `🏷️ ${brand}\n`;
                     
-                    // Tampilkan status stok jika ada
-                    if (stock !== undefined) {
-                        message += `📦 Stok: ${stock}\n`;
-                    }
-                    
-                    if (index < productsToShow.length - 1) {
-                        message += '\n' + '─'.repeat(25) + '\n\n';
-                    }
+                    if (index < pulseProducts.length - 1) message += '────────────\n';
                 });
                 
-                message += `\n_Total: ${productsToShow.length} produk_`;
+                message += `\n_Data real-time dari Digiflazz_`;
                 
                 await bot.editMessageText(message, {
                     chat_id: chatId,
                     message_id: loadingMsg.message_id,
                     parse_mode: 'Markdown'
                 });
-                
             } else {
-                // Fallback: tampilkan data mentah untuk debug
-                await showRawDataFallback(chatId, loadingMsg.message_id, prices);
+                await bot.editMessageText('❌ Tidak ada produk pulsa ditemukan', {
+                    chat_id: chatId,
+                    message_id: loadingMsg.message_id
+                });
             }
         } else {
-            const errorMsg = prices?.error?.message || prices?.error || 'Unknown error';
-            await bot.editMessageText(`❌ Gagal mengambil harga:\n${errorMsg}`, {
+            await bot.editMessageText('❌ Gagal mengambil data harga', {
                 chat_id: chatId,
                 message_id: loadingMsg.message_id
             });
         }
     } catch (error) {
-        console.error('❌ Error in CEK HARGA REAL:', error);
-        await bot.editMessageText(`❌ Terjadi error:\n${error.message}`, {
+        await bot.editMessageText(`❌ Error: ${error.message}`, {
             chat_id: chatId,
             message_id: loadingMsg.message_id
         });
     }
 });
 
-// Helper function untuk fallback
-async function showRawDataFallback(chatId, messageId, prices) {
-    let rawData = 'No data';
-    if (prices && prices.data && Array.isArray(prices.data) && prices.data.length > 0) {
-        rawData = JSON.stringify(prices.data[0], null, 2);
-    }
-    
-    await bot.editMessageText(
-        `❌ Tidak ada produk yang lolos filter.\n\n` +
-        `📝 **Data sample:**\n\`\`\`json\n${rawData.substring(0, 1000)}\n\`\`\`\n\n` +
-        `💡 **Solusi:**\n` +
-        `• Cek struktur data di log\n` +
-        `• Gunakan /debugstructure\n` +
-        `• Adjust filter criteria`,
-        {
-            chat_id: chatId,
-            message_id: messageId,
-            parse_mode: 'Markdown'
-        }
-    );
-}
-// CEK SALDO DIGIFLAZZ
-bot.onText(/💳 CEK SALDO/, async (msg) => {
-    const chatId = msg.chat.id;
-    
-    const loadingMsg = await bot.sendMessage(chatId, '🔄 Mengecek saldo Digiflazz...');
-    
-    try {
-        const balance = await digiflazz.checkBalance();
+// HANDLE PEMBELIAN UNTUK SEMUA KATEGORI
+const purchaseCategories = ['🛒 BELI PULSA', '📦 PAKET DATA', '🎮 GAMES', '💳 E-WALLET', '💡 PLN'];
+
+purchaseCategories.forEach(category => {
+    bot.onText(new RegExp(category), (msg) => {
+        const chatId = msg.chat.id;
+        const userBalance = getCurrentBalance(chatId);
         
-        if (balance.success) {
-            await bot.editMessageText(`💰 **SALDO DIGIFLAZZ**\n\n💵 Rp ${balance.balance.deposit.toLocaleString()}\n\n_Update: ${new Date().toLocaleTimeString('id-ID')}_`, {
-                chat_id: chatId,
-                message_id: loadingMsg.message_id,
+        // Cek saldo minimal
+        if (userBalance < 5000) {
+            bot.sendMessage(chatId, `❌ *SALDO TIDAK CUKUP*\n\n` +
+                                  `Saldo Anda: Rp ${userBalance.toLocaleString()}\n` +
+                                  `Minimal saldo untuk transaksi: Rp 5.000\n\n` +
+                                  `Silakan deposit terlebih dahulu menggunakan menu *💰 DEPOSIT*`, {
                 parse_mode: 'Markdown'
             });
+            return;
+        }
+        
+        const categoryMap = {
+            '🛒 BELI PULSA': { type: 'pulsa', title: 'PULSA' },
+            '📦 PAKET DATA': { type: 'data', title: 'PAKET DATA' },
+            '🎮 GAMES': { type: 'games', title: 'VOUCHER GAME' },
+            '💳 E-WALLET': { type: 'ewallet', title: 'E-WALLET' },
+            '💡 PLN': { type: 'pln', title: 'TOKEN PLN' }
+        };
+        
+        const selected = categoryMap[category];
+        userStates.set(chatId, `purchase_${selected.type}`);
+        userData.set(chatId, { category: selected.type });
+        
+        let message = `🛒 *BELI ${selected.title}*\n\n`;
+        message += `Saldo Anda: *Rp ${userBalance.toLocaleString()}*\n\n`;
+        
+        if (selected.type === 'pulsa' || selected.type === 'data') {
+            message += `Masukkan nomor telepon:\nContoh: 081234567890`;
+            userStates.set(chatId, `purchase_${selected.type}_phone`);
+        } else if (selected.type === 'pln') {
+            message += `Masukkan nomor meteran PLN:\nContoh: 123456789012`;
+            userStates.set(chatId, `purchase_${selected.type}_phone`);
         } else {
-            await bot.editMessageText(`❌ Gagal cek saldo:\n${balance.error}`, {
-                chat_id: chatId,
-                message_id: loadingMsg.message_id
-            });
+            message += `Masukkan ID/Username game atau nomor e-wallet:`;
+            userStates.set(chatId, `purchase_${selected.type}_phone`);
         }
-    } catch (error) {
-        console.error('Error in CEK SALDO:', error);
-        await bot.editMessageText(`❌ Error saat cek saldo:\n${error.message}`, {
-            chat_id: chatId,
-            message_id: loadingMsg.message_id
+        
+        bot.sendMessage(chatId, message, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                keyboard: [['🚫 BATALKAN']],
+                resize_keyboard: true
+            }
         });
-    }
-});
-
-// BELI PULSA FLOW
-bot.onText(/🛒 BELI PULSA/, (msg) => {
-    const chatId = msg.chat.id;
-    userStates.set(chatId, 'waiting_phone');
-    
-    bot.sendMessage(chatId, '📱 **MASUKKAN NOMOR HP**\n\nContoh: 081234567890\n\nPastikan nomor sudah benar!', {
-        parse_mode: 'Markdown',
-        reply_markup: {
-            keyboard: [['🚫 BATAL']],
-            resize_keyboard: true
-        }
     });
 });
 
-// BATAL COMMAND
-bot.onText(/🚫 BATAL/, (msg) => {
-    const chatId = msg.chat.id;
-    userStates.set(chatId, 'main_menu');
-    
-    bot.sendMessage(chatId, '❌ Transaksi dibatalkan.', {
-        reply_markup: {
-            keyboard: [
-                ['🛒 BELI PULSA', '📦 PAKET DATA'],
-                ['📊 CEK HARGA REAL', '👤 PROFIL']
-            ],
-            resize_keyboard: true
-        }
-    });
-});
-
-// HANDLE PHONE NUMBER INPUT
+// HANDLE INPUT NOMOR/ID UNTUK PEMBELIAN
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const text = msg.text;
@@ -248,46 +422,267 @@ bot.on('message', async (msg) => {
     if (text.startsWith('/')) return;
     
     const state = userStates.get(chatId);
+    const user = userData.get(chatId);
     
-    if (!state) {
+    // Handle pendaftaran
+    if (state === 'registration_phone') {
+        if (text === '🚫 BATALKAN') {
+            userStates.set(chatId, 'main_menu');
+            bot.sendMessage(chatId, '❌ Pendaftaran dibatalkan.', {
+                reply_markup: {
+                    keyboard: [
+                        ['📋 PENDAFTARAN', '💰 DEPOSIT'],
+                        ['🛒 BELI PULSA', '📦 PAKET DATA', '🎮 GAMES'],
+                        ['💳 E-WALLET', '💡 PLN', '📊 CEK HARGA'],
+                        ['💼 CEK SALDO', '👤 PROFIL', '❓ BANTUAN']
+                    ],
+                    resize_keyboard: true
+                }
+            });
+            return;
+        }
+        
+        if (/^08[0-9]{9,12}$/.test(text)) {
+            const profile = userProfiles.get(chatId);
+            profile.phone = text;
+            profile.registered = true;
+            userProfiles.set(chatId, profile);
+            
+            userStates.set(chatId, 'main_menu');
+            
+            bot.sendMessage(chatId, `✅ *PENDAFTARAN BERHASIL!*\n\n` +
+                                  `Selamat datang member baru! 🎉\n\n` +
+                                  `📛 Nama: ${profile.name}\n` +
+                                  `📞 Telepon: ${text}\n` +
+                                  `💰 Bonus: Rp 5.000\n\n` +
+                                  `Bonus saldo telah ditambahkan ke akun Anda.`, {
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    keyboard: [
+                        ['📋 PENDAFTARAN', '💰 DEPOSIT'],
+                        ['🛒 BELI PULSA', '📦 PAKET DATA', '🎮 GAMES'],
+                        ['💳 E-WALLET', '💡 PLN', '📊 CEK HARGA'],
+                        ['💼 CEK SALDO', '👤 PROFIL', '❓ BANTUAN']
+                    ],
+                    resize_keyboard: true
+                }
+            });
+            
+            // Beri bonus saldo
+            addBalance(chatId, 5000);
+        } else {
+            bot.sendMessage(chatId, '❌ Format nomor tidak valid! Masukkan nomor yang benar:\nContoh: 081234567890');
+        }
+        return;
+    }
+    
+    // Handle deposit amount
+    if (state === 'deposit_amount') {
+        if (text === '🚫 BATALKAN') {
+            userStates.set(chatId, 'main_menu');
+            bot.sendMessage(chatId, '❌ Deposit dibatalkan.', {
+                reply_markup: {
+                    keyboard: [
+                        ['📋 PENDAFTARAN', '💰 DEPOSIT'],
+                        ['🛒 BELI PULSA', '📦 PAKET DATA', '🎮 GAMES'],
+                        ['💳 E-WALLET', '💡 PLN', '📊 CEK HARGA'],
+                        ['💼 CEK SALDO', '👤 PROFIL', '❓ BANTUAN']
+                    ],
+                    resize_keyboard: true
+                }
+            });
+            return;
+        }
+        
+        const amount = parseInt(text.replace(/[^0-9]/g, ''));
+        if (isNaN(amount) || amount < 10000) {
+            bot.sendMessage(chatId, '❌ Nominal tidak valid! Minimal deposit Rp 10.000\n\nMasukkan nominal yang benar:');
+            return;
+        }
+        
+        // Simpan data deposit
+        userData.set(chatId, { 
+            ...user, 
+            depositAmount: amount,
+            depositId: `DEP${Date.now()}${Math.random().toString(36).substr(2, 5)}`.toUpperCase()
+        });
+        userStates.set(chatId, 'deposit_method');
+        
+        // Tampilkan metode pembayaran
+        const depositMessage = `💰 *DEPOSIT SALDO*\n\n` +
+                             `Nominal: *Rp ${amount.toLocaleString()}*\n` +
+                             `ID Deposit: ${userData.get(chatId).depositId}\n\n` +
+                             `Pilih metode pembayaran:`;
+        
+        bot.sendMessage(chatId, depositMessage, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                keyboard: [
+                    ['💳 QRIS (Instant)', '🏦 Transfer Bank'],
+                    ['🚫 BATALKAN']
+                ],
+                resize_keyboard: true
+            }
+        });
+        return;
+    }
+    
+    // Handle metode deposit
+    if (state === 'deposit_method') {
+        if (text === '🚫 BATALKAN') {
+            userStates.set(chatId, 'main_menu');
+            bot.sendMessage(chatId, '❌ Deposit dibatalkan.', {
+                reply_markup: {
+                    keyboard: [
+                        ['📋 PENDAFTARAN', '💰 DEPOSIT'],
+                        ['🛒 BELI PULSA', '📦 PAKET DATA', '🎮 GAMES'],
+                        ['💳 E-WALLET', '💡 PLN', '📊 CEK HARGA'],
+                        ['💼 CEK SALDO', '👤 PROFIL', '❓ BANTUAN']
+                    ],
+                    resize_keyboard: true
+                }
+            });
+            return;
+        }
+        
+        if (text === '💳 QRIS (Instant)') {
+            const depositData = userData.get(chatId);
+            
+            // Generate QR Code (simulasi)
+            const qrText = `https://your-payment-gateway.com/deposit?amount=${depositData.depositAmount}&id=${depositData.depositId}`;
+            const qr_png = qr.imageSync(qrText, { type: 'png' });
+            
+            const depositMessage = `💰 *DEPOSIT VIA QRIS*\n\n` +
+                                 `Nominal: *Rp ${depositData.depositAmount.toLocaleString()}*\n` +
+                                 `ID Deposit: ${depositData.depositId}\n\n` +
+                                 `*Cara Bayar:*\n` +
+                                 `1. Scan QR code di bawah\n` +
+                                 `2. Bayar dengan aplikasi e-wallet/banking\n` +
+                                 `3. Saldo akan otomatis bertambah dalam 1-5 menit\n\n` +
+                                 `⚠️ *Pastikan nominal sesuai*`;
+            
+            bot.sendPhoto(chatId, qr_png, {
+                caption: depositMessage,
+                parse_mode: 'Markdown'
+            });
+            
+            // Simulasi konfirmasi otomatis setelah 5 detik
+            setTimeout(() => {
+                const newBalance = addBalance(chatId, depositData.depositAmount);
+                bot.sendMessage(chatId, `✅ *DEPOSIT BERHASIL!*\n\n` +
+                                      `Nominal: Rp ${depositData.depositAmount.toLocaleString()}\n` +
+                                      `Saldo baru: Rp ${newBalance.toLocaleString()}\n\n` +
+                                      `Terima kasih telah melakukan deposit! 🎉`, {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        keyboard: [
+                            ['📋 PENDAFTARAN', '💰 DEPOSIT'],
+                            ['🛒 BELI PULSA', '📦 PAKET DATA', '🎮 GAMES'],
+                            ['💳 E-WALLET', '💡 PLN', '📊 CEK HARGA'],
+                            ['💼 CEK SALDO', '👤 PROFIL', '❓ BANTUAN']
+                        ],
+                        resize_keyboard: true
+                    }
+                });
+            }, 5000);
+            
+        } else if (text === '🏦 Transfer Bank') {
+            const depositData = userData.get(chatId);
+            
+            const bankMessage = `💰 *DEPOSIT VIA TRANSFER BANK*\n\n` +
+                              `Nominal: *Rp ${depositData.depositAmount.toLocaleString()}*\n` +
+                              `ID Deposit: ${depositData.depositId}\n\n` +
+                              `*Rekening Tujuan:*\n` +
+                              `🏦 BCA: 1234567890 a.n. TOKO PULSA\n` +
+                              `🏦 BRI: 0987654321 a.n. TOKO PULSA\n\n` +
+                              `*Cara Bayar:*\n` +
+                              `1. Transfer ke rekening di atas\n` +
+                              `2. Screenshot bukti transfer\n` +
+                              `3. Kirim ke admin untuk konfirmasi\n\n` +
+                              `Saldo akan aktif setelah admin memverifikasi.`;
+            
+            bot.sendMessage(chatId, bankMessage, {
+                parse_mode: 'Markdown'
+            });
+        }
+        
         userStates.set(chatId, 'main_menu');
         return;
     }
     
-    if (['🛒 BELI PULSA', '📊 CEK HARGA REAL', '🚫 BATAL', '📦 PAKET DATA', '👤 PROFIL', '💳 CEK SALDO', '❓ BANTUAN'].includes(text)) {
-        return;
-    }
-    
-    if (state === 'waiting_phone') {
-        if (/^08[0-9]{9,12}$/.test(text)) {
-            userData.set(chatId, { phone: text });
-            userStates.set(chatId, 'waiting_operator');
-            
-            await bot.sendMessage(chatId, `📱 **NOMOR:** ${text}\n\nPilih operator:`, {
-                parse_mode: 'Markdown',
+    // Handle input nomor/ID untuk pembelian
+    if (state && state.startsWith('purchase_') && state.endsWith('_phone')) {
+        if (text === '🚫 BATALKAN') {
+            userStates.set(chatId, 'main_menu');
+            userData.delete(chatId);
+            bot.sendMessage(chatId, '❌ Pembelian dibatalkan.', {
                 reply_markup: {
-                    inline_keyboard: [
-                        [
-                            { text: '📱 TELKOMSEL', callback_data: 'operator_telkomsel' },
-                            { text: '📱 XL', callback_data: 'operator_xl' }
-                        ],
-                        [
-                            { text: '📱 INDOSAT', callback_data: 'operator_indosat' },
-                            { text: '📱 AXIS', callback_data: 'operator_axis' }
-                        ],
-                        [
-                            { text: '🚫 Batalkan', callback_data: 'cancel' }
-                        ]
-                    ]
+                    keyboard: [
+                        ['📋 PENDAFTARAN', '💰 DEPOSIT'],
+                        ['🛒 BELI PULSA', '📦 PAKET DATA', '🎮 GAMES'],
+                        ['💳 E-WALLET', '💡 PLN', '📊 CEK HARGA'],
+                        ['💼 CEK SALDO', '👤 PROFIL', '❓ BANTUAN']
+                    ],
+                    resize_keyboard: true
                 }
             });
-        } else {
-            await bot.sendMessage(chatId, '❌ Format nomor tidak valid!\n\nMasukkan nomor HP yang benar:\nContoh: 081234567890');
+            return;
         }
+        
+        const category = state.replace('purchase_', '').replace('_phone', '');
+        const products = productMap[category];
+        
+        if (!products) {
+            bot.sendMessage(chatId, '❌ Kategori tidak valid.');
+            return;
+        }
+        
+        // Simpan nomor/ID yang diinput
+        userData.set(chatId, { 
+            ...user, 
+            customerNo: text,
+            category: category
+        });
+        userStates.set(chatId, `purchase_${category}_product`);
+        
+        // Tampilkan pilihan produk
+        let message = `🛒 *PILIH PRODUK*\n\n`;
+        message += `Kategori: ${category.toUpperCase()}\n`;
+        message += `Tujuan: ${text}\n\n`;
+        message += `Pilih produk yang diinginkan:`;
+        
+        // Buat keyboard inline untuk pilihan produk
+        const productKeys = Object.keys(products);
+        const keyboard = [];
+        
+        for (let i = 0; i < productKeys.length; i += 2) {
+            const row = [];
+            if (products[productKeys[i]]) {
+                row.push({ 
+                    text: products[productKeys[i]].name, 
+                    callback_data: `product_${category}_${productKeys[i]}` 
+                });
+            }
+            if (products[productKeys[i + 1]]) {
+                row.push({ 
+                    text: products[productKeys[i + 1]].name, 
+                    callback_data: `product_${category}_${productKeys[i + 1]}` 
+                });
+            }
+            keyboard.push(row);
+        }
+        keyboard.push([{ text: '🚫 Batalkan', callback_data: 'cancel' }]);
+        
+        bot.sendMessage(chatId, message, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: keyboard
+            }
+        });
     }
 });
 
-// HANDLE CALLBACK QUERIES (BUTTON CLICKS)
+// HANDLE CALLBACK QUERIES (Pemilihan Produk)
 bot.on('callback_query', async (callbackQuery) => {
     const message = callbackQuery.message;
     const chatId = message.chat.id;
@@ -297,107 +692,116 @@ bot.on('callback_query', async (callbackQuery) => {
     
     if (data === 'cancel') {
         userStates.set(chatId, 'main_menu');
-        await bot.editMessageText('❌ Transaksi dibatalkan.', {
+        userData.delete(chatId);
+        await bot.editMessageText('❌ Pembelian dibatalkan.', {
             chat_id: chatId,
             message_id: message.message_id
         });
         return;
     }
     
-    // Handle operator selection
-    if (data.startsWith('operator_')) {
-        const operator = data.replace('operator_', '');
-        const user = userData.get(chatId);
+    // Handle pemilihan produk
+    if (data.startsWith('product_')) {
+        const parts = data.replace('product_', '').split('_');
+        const category = parts[0];
+        const productKey = parts.slice(1).join('_');
         
-        if (user) {
-            userData.set(chatId, { ...user, operator });
-            userStates.set(chatId, 'waiting_amount');
-            
-            await bot.editMessageText(`📱 **NOMOR:** ${user.phone}\n📞 **OPERATOR:** ${operator.toUpperCase()}\n\nPilih nominal:`, {
-                chat_id: chatId,
-                message_id: message.message_id,
-                parse_mode: 'Markdown',
-                reply_markup: {
-                    inline_keyboard: [
-                        [
-                            { text: '💰 5.000', callback_data: `nominal_${operator}_5k` },
-                            { text: '💰 10.000', callback_data: `nominal_${operator}_10k` }
-                        ],
-                        [
-                            { text: '💰 25.000', callback_data: `nominal_${operator}_25k` },
-                            { text: '💰 50.000', callback_data: `nominal_${operator}_50k` }
-                        ],
-                        [
-                            { text: '💰 100.000', callback_data: `nominal_${operator}_100k` }
-                        ],
-                        [
-                            { text: '🚫 Batalkan', callback_data: 'cancel' }
-                        ]
-                    ]
-                }
-            });
-        }
-    }
-    
-    // Handle nominal selection
-    if (data.startsWith('nominal_')) {
-        const parts = data.replace('nominal_', '').split('_');
-        const operator = parts[0];
-        const nominal = parts[1];
-        const productKey = `${operator}_${nominal}`;
-        
-        const selectedProduct = productMap[productKey];
+        const selectedProduct = productMap[category]?.[productKey];
         const user = userData.get(chatId);
         
         if (selectedProduct && user) {
-            await bot.editMessageText(`✅ **KONFIRMASI PEMESANAN**\n\n📱 Nomor: ${user.phone}\n📞 Operator: ${operator.toUpperCase()}\n💵 Produk: ${selectedProduct.name}\n💰 Harga: Rp ${selectedProduct.price.toLocaleString()}\n\n⚠️ Pastikan data sudah benar!\nKetik ✅ KONFIRMASI untuk melanjutkan`, {
+            const userBalance = getCurrentBalance(chatId);
+            
+            if (userBalance < selectedProduct.price) {
+                await bot.editMessageText(`❌ *SALDO TIDAK CUKUP*\n\n` +
+                                       `Produk: ${selectedProduct.name}\n` +
+                                       `Harga: Rp ${selectedProduct.price.toLocaleString()}\n` +
+                                       `Saldo Anda: Rp ${userBalance.toLocaleString()}\n\n` +
+                                       `Silakan deposit terlebih dahulu.`, {
+                    chat_id: chatId,
+                    message_id: message.message_id,
+                    parse_mode: 'Markdown'
+                });
+                return;
+            }
+            
+            // Tampilkan konfirmasi pembelian
+            let confirmMessage = `✅ *KONFIRMASI PEMBELIAN*\n\n`;
+            confirmMessage += `📦 Produk: ${selectedProduct.name}\n`;
+            confirmMessage += `💵 Harga: Rp ${selectedProduct.price.toLocaleString()}\n`;
+            
+            if (category === 'pulsa' || category === 'data' || category === 'pln') {
+                confirmMessage += `📱 Tujuan: ${user.customerNo}\n`;
+            } else {
+                confirmMessage += `🎯 Tujuan: ${user.customerNo}\n`;
+            }
+            
+            confirmMessage += `💰 Saldo: Rp ${userBalance.toLocaleString()}\n\n`;
+            confirmMessage += `⚠️ Pastikan data sudah benar!\n`;
+            confirmMessage += `Ketik *✅ KONFIRMASI* untuk melanjutkan`;
+            
+            await bot.editMessageText(confirmMessage, {
                 chat_id: chatId,
                 message_id: message.message_id,
                 parse_mode: 'Markdown'
             });
             
-            userData.set(chatId, { 
-                ...user, 
+            userData.set(chatId, {
+                ...user,
                 productCode: selectedProduct.code,
                 productName: selectedProduct.name,
-                price: selectedProduct.price
+                price: selectedProduct.price,
+                category: category
             });
-            userStates.set(chatId, 'waiting_confirmation');
-        } else {
-            await bot.editMessageText(`❌ Produk tidak tersedia: ${productKey}\n\nSilakan pilih operator dan nominal lain.`, {
-                chat_id: chatId,
-                message_id: message.message_id
-            });
+            userStates.set(chatId, 'waiting_purchase_confirmation');
         }
     }
 });
 
-// Handle confirmation message
+// HANDLE KONFIRMASI PEMBELIAN
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const text = msg.text;
     const state = userStates.get(chatId);
     
-    if (state === 'waiting_confirmation' && text === '✅ KONFIRMASI') {
+    if (state === 'waiting_purchase_confirmation' && text === '✅ KONFIRMASI') {
         const user = userData.get(chatId);
         
         if (user) {
-            await bot.sendMessage(chatId, `🔄 **MEMPROSES TRANSAKSI**\n\n📱 ${user.phone}\n💵 ${user.productName}\n💰 Rp ${user.price.toLocaleString()}\n\nTunggu sebentar...`, {
-                parse_mode: 'Markdown'
-            });
+            // Kurangi saldo user
+            const deductSuccess = deductBalance(chatId, user.price);
+            if (!deductSuccess) {
+                await bot.sendMessage(chatId, '❌ Saldo tidak cukup!');
+                return;
+            }
             
-            // Process real transaction dengan Digiflazz
-            const result = await digiflazz.purchase(user.productCode, user.phone);
+            await bot.sendMessage(chatId, `🔄 **MEMPROSES TRANSAKSI**\n\n` +
+                                       `📦 Produk: ${user.productName}\n` +
+                                       `💵 Harga: Rp ${user.price.toLocaleString()}\n` +
+                                       `🎯 Tujuan: ${user.customerNo}\n\n` +
+                                       `Tunggu sebentar...`);
+            
+            // Process transaction dengan Digiflazz
+            const result = await digiflazz.purchase(user.productCode, user.customerNo);
             
             if (result.success) {
                 const transaction = result.data;
-                await bot.sendMessage(chatId, `🎉 **TRANSAKSI BERHASIL!**\n\n📱 Nomor: ${user.phone}\n💵 Produk: ${user.productName}\n💰 Harga: Rp ${user.price.toLocaleString()}\n🆔 Ref: ${result.refId}\n📦 SN: ${transaction.sn || 'N/A'}\n⏱️ Status: ${transaction.status}\n\nTerima kasih telah berbelanja! 🛍️`, {
-                    parse_mode: 'Markdown'
-                });
+                await bot.sendMessage(chatId, `🎉 **TRANSAKSI BERHASIL!**\n\n` +
+                                           `📦 Produk: ${user.productName}\n` +
+                                           `🎯 Tujuan: ${user.customerNo}\n` +
+                                           `💵 Harga: Rp ${user.price.toLocaleString()}\n` +
+                                           `🆔 Ref: ${result.refId}\n` +
+                                           `📦 SN: ${transaction.sn || 'N/A'}\n` +
+                                           `⏱️ Status: ${transaction.status}\n\n` +
+                                           `Terima kasih telah berbelanja! 🛍️`);
             } else {
-                await bot.sendMessage(chatId, `❌ **TRANSAKSI GAGAL**\n\n📱 ${user.phone}\n💵 ${user.productName}\n\nError: ${result.error?.message || result.error || 'Unknown error'}\n\nSilakan coba lagi atau hubungi admin.`, {
-                    parse_mode: 'Markdown'
-                });
+                // Kembalikan saldo jika gagal
+                addBalance(chatId, user.price);
+                await bot.sendMessage(chatId, `❌ **TRANSAKSI GAGAL**\n\n` +
+                                           `📦 ${user.productName}\n` +
+                                           `🎯 ${user.customerNo}\n\n` +
+                                           `Error: ${result.error?.message || result.error || 'Unknown error'}\n\n` +
+                                           `Saldo telah dikembalikan.`);
             }
             
             // Reset state
@@ -405,85 +809,6 @@ bot.on('message', async (msg) => {
             userData.delete(chatId);
         }
     }
-});
-
-// PROFIL COMMAND
-bot.onText(/👤 PROFIL/, (msg) => {
-    const chatId = msg.chat.id;
-    
-    bot.sendMessage(chatId, `👤 **PROFIL PENGGUNA**\n\n🆔 ID: ${msg.from.id}\n📛 Nama: ${msg.from.first_name} ${msg.from.last_name || ''}\n🤖 Username: @${msg.from.username || 'Tidak ada'}\n\n📅 Bergabung: ${new Date().toLocaleDateString('id-ID')}`, {
-        parse_mode: 'Markdown'
-    });
-});
-
-// BANTUAN COMMAND
-bot.onText(/❓ BANTUAN/, (msg) => {
-    const chatId = msg.chat.id;
-    
-    bot.sendMessage(chatId, `❓ **BANTUAN & PANDUAN**\n\n🔧 **Cara penggunaan:**\n1. Pilih "Beli Pulsa"\n2. Masukkan nomor HP\n3. Pilih operator & nominal\n4. Konfirmasi pembelian\n\n💰 **Cek Saldo:** Gunakan menu "Cek Saldo"\n📊 **Harga Real:** Data langsung dari Digiflazz\n\n📞 **Support:** Hubungi admin untuk bantuan.\n\n🛠️ **Status:** Bot Active ✅`, {
-        parse_mode: 'Markdown'
-    });
-});
-// DEBUG STRUCTURE COMMAND
-bot.onText(/\/debugstructure/, async (msg) => {
-    const chatId = msg.chat.id;
-    
-    const loadingMsg = await bot.sendMessage(chatId, '🔍 Menganalisis struktur data Digiflazz...');
-    
-    try {
-        const prices = await digiflazz.getPriceList();
-        
-        let debugMessage = '🔧 **STRUKTUR DATA DIGIFLAZZ**\n\n';
-        
-        if (prices && prices.success && prices.data) {
-            debugMessage += `✅ Success: ${prices.success}\n`;
-            debugMessage += `📊 Data Type: ${typeof prices.data}\n`;
-            
-            if (Array.isArray(prices.data)) {
-                debugMessage += `🔢 Array Length: ${prices.data.length}\n\n`;
-                
-                if (prices.data.length > 0) {
-                    const sample = prices.data[0];
-                    debugMessage += `📝 **SAMPLE PRODUCT STRUCTURE:**\n\`\`\`json\n${JSON.stringify(sample, null, 2).substring(0, 1500)}\n\`\`\`\n\n`;
-                    
-                    // Analisis field yang ada
-                    debugMessage += `🔍 **FIELD ANALYSIS:**\n`;
-                    const fields = Object.keys(sample);
-                    fields.forEach(field => {
-                        debugMessage += `• ${field}: ${typeof sample[field]} = ${JSON.stringify(sample[field]).substring(0, 50)}\n`;
-                    });
-                }
-            } else if (typeof prices.data === 'object') {
-                debugMessage += `🔢 Object Keys: ${Object.keys(prices.data).length}\n\n`;
-                const firstKey = Object.keys(prices.data)[0];
-                if (firstKey) {
-                    debugMessage += `📝 **SAMPLE STRUCTURE:**\n\`\`\`json\n${JSON.stringify(prices.data[firstKey], null, 2).substring(0, 1500)}\n\`\`\``;
-                }
-            }
-        } else {
-            debugMessage += `❌ Invalid response: ${JSON.stringify(prices)}`;
-        }
-        
-        await bot.editMessageText(debugMessage, {
-            chat_id: chatId,
-            message_id: loadingMsg.message_id,
-            parse_mode: 'Markdown'
-        });
-        
-    } catch (error) {
-        await bot.editMessageText(`❌ Error: ${error.message}`, {
-            chat_id: chatId,
-            message_id: loadingMsg.message_id
-        });
-    }
-});
-// PAKET DATA COMMAND
-bot.onText(/📦 PAKET DATA/, (msg) => {
-    const chatId = msg.chat.id;
-    
-    bot.sendMessage(chatId, `📦 **PAKET DATA**\n\nFitur paket data sedang dalam pengembangan.\n\nUntuk sementara, gunakan menu "Beli Pulsa" untuk pembelian pulsa reguler.`, {
-        parse_mode: 'Markdown'
-    });
 });
 
 // ERROR HANDLING
@@ -499,28 +824,39 @@ bot.on('webhook_error', (error) => {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Basic health check endpoint
+app.use(express.json());
+
+// Health check endpoint
 app.get('/', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    message: 'Pulsa Telegram Bot is running!',
-    timestamp: new Date().toISOString()
-  });
+    res.json({ 
+        status: 'OK', 
+        message: 'Pulsa Telegram Bot with Complete Features is running!',
+        features: [
+            'Member Registration',
+            'Balance System', 
+            'QRIS Deposit',
+            'Pulsa & Data',
+            'Games Voucher',
+            'E-Wallet',
+            'PLN',
+            'Real-time Prices'
+        ]
+    });
 });
 
-// Health check untuk Render
 app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'healthy',
-    service: 'Telegram Pulsa Bot',
-    uptime: process.uptime()
-  });
+    res.status(200).json({ 
+        status: 'healthy',
+        users: userProfiles.size,
+        balances: userBalances.size,
+        timestamp: new Date().toISOString()
+    });
 });
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Server is running on port ${PORT}`);
-  console.log(`✅ Bot is live and ready!`);
+    console.log(`✅ Server is running on port ${PORT}`);
+    console.log(`✅ Bot with complete features is live!`);
 });
 
-console.log("✅ Bot with Custom SKUs is running!");
+console.log("✅ Bot with Complete Features is running!");
