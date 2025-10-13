@@ -1,4 +1,140 @@
-const});
+const TelegramBot = require('node-telegram-bot-api');
+const digiflazz = require('./digiflazz');
+const express = require('express');
+
+console.log("🤖 Starting Pulsa Telegram Bot with Custom SKUs...");
+
+const token = process.env.TELEGRAM_TOKEN;
+if (!token) {
+    console.log("❌ ERROR: TELEGRAM_TOKEN not set");
+    process.exit(1);
+}
+
+const bot = new TelegramBot(token, { polling: true });
+const userStates = new Map();
+const userData = new Map();
+
+// PRODUCT MAP DENGAN SKU CUSTOM ANDA
+const productMap = {
+    // TELKOMSEL - menggunakan Tkl
+    'telkomsel_5k': { code: 'Tkl5', name: 'Telkomsel 5.000', price: 6000 },
+    'telkomsel_10k': { code: 'Tkl10', name: 'Telkomsel 10.000', price: 11000 },
+    'telkomsel_25k': { code: 'Tkl25', name: 'Telkomsel 25.000', price: 26000 },
+    'telkomsel_50k': { code: 'Tkl50', name: 'Telkomsel 50.000', price: 51000 },
+    'telkomsel_100k': { code: 'Tkl100', name: 'Telkomsel 100.000', price: 101000 },
+    
+    // INDOSAT - menggunakan IND
+    'indosat_5k': { code: 'IND5', name: 'Indosat 5.000', price: 6000 },
+    'indosat_10k': { code: 'IND10', name: 'Indosat 10.000', price: 11000 },
+    'indosat_25k': { code: 'IND25', name: 'Indosat 25.000', price: 26000 },
+    'indosat_50k': { code: 'IND50', name: 'Indosat 50.000', price: 51000 },
+    'indosat_100k': { code: 'IND100', name: 'Indosat 100.000', price: 101000 },
+    
+    // XL - menggunakan X
+    'xl_5k': { code: 'X5', name: 'XL 5.000', price: 6000 },
+    'xl_10k': { code: 'X10', name: 'XL 10.000', price: 11000 },
+    'xl_25k': { code: 'X25', name: 'XL 25.000', price: 26000 },
+    'xl_50k': { code: 'X50', name: 'XL 50.000', price: 51000 },
+    'xl_100k': { code: 'X100', name: 'XL 100.000', price: 101000 },
+    
+    // AXIS - menggunakan Ax
+    'axis_5k': { code: 'Ax5', name: 'Axis 5.000', price: 6000 },
+    'axis_10k': { code: 'Ax10', name: 'Axis 10.000', price: 11000 },
+    'axis_25k': { code: 'Ax25', name: 'Axis 25.000', price: 26000 },
+    'axis_50k': { code: 'Ax50', name: 'Axis 50.000', price: 51000 },
+    'axis_100k': { code: 'Ax100', name: 'Axis 100.000', price: 101000 }
+};
+
+console.log("✅ Bot initialized with custom SKUs");
+
+// ==================== BOT COMMANDS ====================
+
+bot.onText(/\/start/, (msg) => {
+    const chatId = msg.chat.id;
+    userStates.set(chatId, 'main_menu');
+    
+    bot.sendMessage(chatId, `🤖 **TOKO PULSA DIGIFLAZZ**\n\nSelamat datang! Saya siap melayani pembelian pulsa dan paket data Anda.\n\nPilih menu di bawah:`, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+            keyboard: [
+                ['🛒 BELI PULSA', '📦 PAKET DATA'],
+                ['📊 CEK HARGA REAL', '👤 PROFIL'],
+                ['💳 CEK SALDO', '❓ BANTUAN']
+            ],
+            resize_keyboard: true
+        }
+    });
+});
+
+// CEK HARGA REAL dari Digiflazz - FIXED VERSION
+bot.onText(/📊 CEK HARGA REAL/, async (msg) => {
+    const chatId = msg.chat.id;
+    
+    const loadingMsg = await bot.sendMessage(chatId, '🔄 Mengambil daftar harga terbaru dari Digiflazz...');
+    
+    try {
+        const prices = await digiflazz.getPriceList();
+        
+        console.log('🔍 Full Digiflazz Response:', JSON.stringify(prices, null, 2));
+        
+        if (prices && prices.success) {
+            // ✅ FIX: Handle berbagai format response Digiflazz
+            let pulseProducts = [];
+            
+            if (Array.isArray(prices.data)) {
+                pulseProducts = prices.data
+                    .filter(p => p && (p.category === 'pulsa' || p.type === 'pulsa'))
+                    .slice(0, 15);
+            } else if (prices.data && typeof prices.data === 'object') {
+                // Jika data berupa object, convert ke array
+                pulseProducts = Object.values(prices.data)
+                    .filter(p => p && (p.category === 'pulsa' || p.type === 'pulsa'))
+                    .slice(0, 15);
+            }
+            
+            console.log('🔍 Filtered Products:', pulseProducts);
+            
+            if (pulseProducts.length > 0) {
+                let message = '📋 **DAFTAR HARGA PULSA REAL**\n\n';
+                
+                pulseProducts.forEach((product, index) => {
+                    const productName = product.product_name || product.name || product.product_name_prepaid || 'Unknown Product';
+                    const price = product.price || product.seller_price || 0;
+                    const brand = product.brand || product.operator || 'Unknown';
+                    
+                    message += `📱 ${productName}\n💵 Rp ${price.toLocaleString()}\n🏷️ ${brand}\n`;
+                    
+                    if (index < pulseProducts.length - 1) message += '\n';
+                });
+                
+                message += '\n_Data real-time dari Digiflazz_';
+                
+                await bot.editMessageText(message, {
+                    chat_id: chatId,
+                    message_id: loadingMsg.message_id,
+                    parse_mode: 'Markdown'
+                });
+            } else {
+                await bot.editMessageText('❌ Tidak ada produk pulsa ditemukan dalam response\n\nCoba cek struktur data Digiflazz.', {
+                    chat_id: chatId,
+                    message_id: loadingMsg.message_id
+                });
+            }
+        } else {
+            const errorMsg = prices?.error?.message || prices?.message || 'Unknown error';
+            await bot.editMessageText(`❌ Response tidak valid dari Digiflazz:\n${errorMsg}`, {
+                chat_id: chatId,
+                message_id: loadingMsg.message_id
+            });
+        }
+    } catch (error) {
+        console.error('❌ Error in CEK HARGA REAL:', error);
+        await bot.editMessageText(`❌ Terjadi error:\n${error.message}`, {
+            chat_id: chatId,
+            message_id: loadingMsg.message_id
+        });
+    }
+});
 
 // CEK SALDO DIGIFLAZZ
 bot.onText(/💳 CEK SALDO/, async (msg) => {
@@ -6,16 +142,24 @@ bot.onText(/💳 CEK SALDO/, async (msg) => {
     
     const loadingMsg = await bot.sendMessage(chatId, '🔄 Mengecek saldo Digiflazz...');
     
-    const balance = await digiflazz.checkBalance();
-    
-    if (balance.success) {
-        await bot.editMessageText(`💰 **SALDO DIGIFLAZZ**\n\n💵 Rp ${balance.balance.deposit.toLocaleString()}\n\n_Update: ${new Date().toLocaleTimeString('id-ID')}_`, {
-            chat_id: chatId,
-            message_id: loadingMsg.message_id,
-            parse_mode: 'Markdown'
-        });
-    } else {
-        await bot.editMessageText(`❌ Gagal cek saldo:\n${balance.error}`, {
+    try {
+        const balance = await digiflazz.checkBalance();
+        
+        if (balance.success) {
+            await bot.editMessageText(`💰 **SALDO DIGIFLAZZ**\n\n💵 Rp ${balance.balance.deposit.toLocaleString()}\n\n_Update: ${new Date().toLocaleTimeString('id-ID')}_`, {
+                chat_id: chatId,
+                message_id: loadingMsg.message_id,
+                parse_mode: 'Markdown'
+            });
+        } else {
+            await bot.editMessageText(`❌ Gagal cek saldo:\n${balance.error}`, {
+                chat_id: chatId,
+                message_id: loadingMsg.message_id
+            });
+        }
+    } catch (error) {
+        console.error('Error in CEK SALDO:', error);
+        await bot.editMessageText(`❌ Error saat cek saldo:\n${error.message}`, {
             chat_id: chatId,
             message_id: loadingMsg.message_id
         });
@@ -237,12 +381,27 @@ bot.onText(/❓ BANTUAN/, (msg) => {
     });
 });
 
-// ==================== SERVER START FOR RENDER ====================
-const PORT = process.env.PORT || 3000;
+// PAKET DATA COMMAND
+bot.onText(/📦 PAKET DATA/, (msg) => {
+    const chatId = msg.chat.id;
+    
+    bot.sendMessage(chatId, `📦 **PAKET DATA**\n\nFitur paket data sedang dalam pengembangan.\n\nUntuk sementara, gunakan menu "Beli Pulsa" untuk pembelian pulsa reguler.`, {
+        parse_mode: 'Markdown'
+    });
+});
 
-// Import express untuk membuat server
-const express = require('express');
+// ERROR HANDLING
+bot.on('polling_error', (error) => {
+    console.log('❌ Polling Error:', error.message);
+});
+
+bot.on('webhook_error', (error) => {
+    console.log('❌ Webhook Error:', error);
+});
+
+// ==================== EXPRESS SERVER FOR RENDER ====================
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 // Basic health check endpoint
 app.get('/', (req, res) => {
@@ -266,27 +425,6 @@ app.get('/health', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server is running on port ${PORT}`);
   console.log(`✅ Bot is live and ready!`);
-  console.log(`✅ Health check: https://your-app-name.onrender.com/health`);
-});
-
-// PAKET DATA COMMAND
-bot.onText(/📦 PAKET DATA/, (msg) => {
-    const chatId = msg.chat.id;
-    
-    bot.sendMessage(chatId, `📦 **PAKET DATA**\n\nFitur paket data sedang dalam pengembangan.\n\nUntuk sementara, gunakan menu "Beli Pulsa" untuk pembelian pulsa reguler.`, {
-        parse_mode: 'Markdown'
-    });
-});
-
-// ERROR HANDLING
-bot.on('polling_error', (error) => {
-    console.log('❌ Polling Error:', error.message);
-});
-
-bot.on('webhook_error', (error) => {
-    console.log('❌ Webhook Error:', error);
 });
 
 console.log("✅ Bot with Custom SKUs is running!");
-console.log("💡 Test with: /start -> 📊 CEK HARGA REAL -> 💳 CEK SALDO");
-console.log("🛒 Available operators: Telkomsel, XL, Indosat, Axis");
