@@ -4,9 +4,8 @@ services:
     name: pulsa-api
     env: node
     plan: free
-    rootDir: server
     buildCommand: npm install
-    startCommand: npm start
+    startCommand: node server/app.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -26,21 +25,24 @@ services:
     name: pulsa-bot
     env: node
     plan: free
-    rootDir: bot
     buildCommand: npm install
-    startCommand: npm start
+    startCommand: node index.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: BOT_TOKEN
         sync: false
+      - key: MONGODB_URI
+        fromDatabase:
+          name: pulsa-db
+          property: connectionString
       - key: API_BASE_URL
         fromService:
-          name: pulsa-api
           type: web
+          name: pulsa-api
           property: host
 
-# MongoDB Database (Jika pakai MongoDB di Render - optional)
+# MongoDB Database
 databases:
   - name: pulsa-db
     plan: free
