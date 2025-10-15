@@ -1,0 +1,52 @@
+services:
+  # REST API Server
+  - type: web
+    name: pulsa-api
+    env: node
+    plan: free
+    rootDirectory: server  # ✅ INI YANG PENTING!
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: DIGIFLAZZ_USERNAME
+        sync: false
+      - key: DIGIFLAZZ_API_KEY
+        sync: false
+
+  # Telegram Bot Worker
+  - type: worker
+    name: pulsa-bot
+    env: node
+    plan: free
+    rootDirectory: bot  # ✅ INI JUGA!
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BOT_TOKEN
+        sync: false
+      - key: API_BASE_URL
+        fromService:
+          name: pulsa-api
+          type: web
+          property: host
+
+  # Admin Dashboard (Static Site)
+  - type: web
+    name: pulsa-admin
+    env: static
+    plan: free
+    rootDirectory: admin-dashboard
+    buildCommand: npm install && npm run build
+    publishPath: ./build
+    envVars:
+      - key: REACT_APP_API_URL
+        fromService:
+          name: pulsa-api
+          type: web
+          property: host
