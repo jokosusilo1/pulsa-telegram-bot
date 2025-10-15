@@ -4,25 +4,29 @@ services:
     name: pulsa-api
     env: node
     plan: free
-    rootDirectory: server  # ✅ INI YANG PENTING!
+    rootDir: server
     buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: MONGODB_URI
-        sync: false
+        fromDatabase:
+          name: pulsa-db
+          property: connectionString
       - key: DIGIFLAZZ_USERNAME
         sync: false
       - key: DIGIFLAZZ_API_KEY
         sync: false
+      - key: JWT_SECRET
+        generateValue: true
 
-  # Telegram Bot Worker
+  # Telegram Bot (Background Worker)
   - type: worker
     name: pulsa-bot
     env: node
     plan: free
-    rootDirectory: bot  # ✅ INI JUGA!
+    rootDir: bot
     buildCommand: npm install
     startCommand: npm start
     envVars:
@@ -36,17 +40,9 @@ services:
           type: web
           property: host
 
-  # Admin Dashboard (Static Site)
-  - type: web
-    name: pulsa-admin
-    env: static
+# MongoDB Database (Jika pakai MongoDB di Render - optional)
+databases:
+  - name: pulsa-db
     plan: free
-    rootDirectory: admin-dashboard
-    buildCommand: npm install && npm run build
-    publishPath: ./build
-    envVars:
-      - key: REACT_APP_API_URL
-        fromService:
-          name: pulsa-api
-          type: web
-          property: host
+    databaseName: pulsa
+    user: pulsa-admin
