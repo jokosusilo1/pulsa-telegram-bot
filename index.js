@@ -1,6 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 const digiflazz = require('./digiflazz');
 const express = require('express');
+const commands= require("./handlers/commands");
 
 console.log("🤖 Starting Pulsa Telegram Bot - Optimized Version...");
 
@@ -34,32 +35,7 @@ const userBalances = new Map();
 
 // ==================== BOT COMMANDS ====================
 
-bot.onText(/\/start/, (msg) => {
-    const chatId = msg.chat.id;
-    userStates.set(chatId, 'main_menu');
-    
-    const welcomeMsg = `🤖 **SELAMAT DATANG DI TOKO PULSA DIGIFLAZZ**\n\n` +
-                      `Halo! Saya siap melayani pembelian:\n` +
-                      `• 📱 Pulsa & Paket Data\n` +
-                      `• 🎮 Voucher Game\n` +
-                      `• 💳 E-Wallet\n` +
-                      `• 💡 Token PLN\n\n` +
-                      `Pilih menu di bawah:`;
-    
-    bot.sendMessage(chatId, welcomeMsg, {
-        parse_mode: 'Markdown',
-        reply_markup: {
-            keyboard: [
-                ['📋 PENDAFTARAN', '💰 DEPOSIT'],
-                ['🛒 BELI PULSA', '📦 PAKET DATA', '🎮 GAMES'],
-                ['💳 E-WALLET', '💡 PLN', '📊 CEK HARGA'],
-                ['💼 CEK SALDO', '👤 PROFIL', '❓ BANTUAN']
-            ],
-            resize_keyboard: true
-        }
-    });
-});
-
+bot.onText(/\/start/, commands.start);
 // CEK HARGA REAL
 bot.onText(/📊 CEK HARGA/, async (msg) => {
     const chatId = msg.chat.id;
