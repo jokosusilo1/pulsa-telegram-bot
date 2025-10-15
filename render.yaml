@@ -9,16 +9,6 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: MONGODB_URI
-        fromDatabase:
-          name: pulsa-db
-          property: connectionString
-      - key: DIGIFLAZZ_USERNAME
-        sync: false
-      - key: DIGIFLAZZ_API_KEY
-        sync: false
-      - key: JWT_SECRET
-        generateValue: true
 
   # Telegram Bot (Background Worker)
   - type: worker
@@ -32,19 +22,3 @@ services:
         value: production
       - key: BOT_TOKEN
         sync: false
-      - key: MONGODB_URI
-        fromDatabase:
-          name: pulsa-db
-          property: connectionString
-      - key: API_BASE_URL
-        fromService:
-          type: web
-          name: pulsa-api
-          property: host
-
-# MongoDB Database
-databases:
-  - name: pulsa-db
-    plan: free
-    databaseName: pulsa
-    user: pulsa-admin
