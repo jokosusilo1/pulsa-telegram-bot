@@ -4,6 +4,9 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
+// Pastikan path benar
+const productsRouter = require('./routes/products');
+ 
 require('dotenv').config();
 
 // Connect to database
