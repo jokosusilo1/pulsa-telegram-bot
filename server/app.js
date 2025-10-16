@@ -6,7 +6,7 @@ const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 // Pastikan path benar
 const productsRouter = require('./routes/products');
-const transactionsRouter= require('.routes/transactions');
+const transactionsRouter= require('./routes/transactions');
  
 require('dotenv').config();
 
