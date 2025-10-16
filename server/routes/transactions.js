@@ -1,6 +1,6 @@
 
 const express = require('express');
-const Transaction = require('../models/Transaction');
+const Transaction = require('../models/Transactions');
 const DigiFlazzService = require('../services/DigiFlazzService');
 const router = express.Router();
 
