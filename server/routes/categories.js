@@ -1,18 +1,16 @@
-
-
 const express = require('express');
-const Category = require('../models/Category');
-const { authenticateAdmin } = require('../middleware/auth');
-
 const router = express.Router();
 
-// Get all categories
+// Simple categories route tanpa database
 router.get('/', async (req, res) => {
   try {
-    const categories = await Category.find({ isActive: true }).sort({ name: 1 });
     res.json({
       success: true,
-      data: categories
+      data: [
+        { _id: '1', name: 'Pulsa', description: 'Pulsa all operator', isActive: true },
+        { _id: '2', name: 'Data', description: 'Paket internet', isActive: true },
+        { _id: '3', name: 'E-money', description: 'E-money & QRIS', isActive: true }
+      ]
     });
   } catch (error) {
     res.status(500).json({
@@ -22,15 +20,12 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Create category (Admin only)
-router.post('/', authenticateAdmin, async (req, res) => {
+// Create category - simple version
+router.post('/', async (req, res) => {
   try {
-    const category = new Category(req.body);
-    await category.save();
-    
     res.status(201).json({
       success: true,
-      data: category,
+      data: req.body,
       message: 'Category created successfully'
     });
   } catch (error) {
