@@ -6,7 +6,7 @@ const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 // Pastikan path benar
 const productsRouter = require('./routes/products');
-//const transactionsRouter= require('./routes/transactions');
+const transactionsRouter= require('./routes/transactions');
  
 require('dotenv').config();
 
@@ -43,7 +43,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/agents', require('./routes/agents'));
-//app.use('/api/transactions', require('./routes/transactions'));
+app.use('/api/transactions', require('./routes/transactions'));
 
 // Health Check Route
 app.get('/health', (req, res) => {

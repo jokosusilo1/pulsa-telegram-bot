@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
+
 router.get('/', (req, res) => {
-  res.json({ success: true, message: 'Agents route' });
+  res.json({ 
+    success: true,
+    message: 'Agents OK!',
+    data: []
+  });
 });
+
 module.exports = router;
