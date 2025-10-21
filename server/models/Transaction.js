@@ -1,68 +1,75 @@
-
+// models/Transaction.js
 const mongoose = require('mongoose');
 
-const agentSchema = new mongoose.Schema({
-  telegramId: {
+const transactionSchema = new mongoose.Schema({
+  // ID unik untuk tracking
+  transaction_id: {
     type: String,
-    required: [true, 'Telegram ID is required'],
-    unique: true,
-    index: true
+    required: true,
+    unique: true
   },
-  username: {
+  
+  // Info produk
+  product_code: {
     type: String,
-    trim: true
+    required: true
   },
-  firstName: {
+  product_name: {
     type: String,
-    required: [true, 'First name is required'],
-    trim: true
+    required: true
   },
-  lastName: {
+  
+  // Info customer
+  customer_number: {
     type: String,
-    trim: true
+    required: true
   },
-  phone: {
+  agent_id: {
     type: String,
-    trim: true
+    required: true
   },
-  level: {
-    type: String,
-    enum: ['basic', 'premium', 'pro'],
-    default: 'basic'
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  balance: {
+  
+  // Pricing
+  base_price: {
     type: Number,
-    default: 0,
-    min: [0, 'Balance cannot be negative']
+    required: true
   },
-  totalCommission: {
+  selling_price: {
     type: Number,
-    default: 0
+    required: true
   },
-  totalSales: {
+  profit: {
     type: Number,
-    default: 0
+    required: true
   },
-  totalTransactions: {
-    type: Number,
-    default: 0
+  
+  // Status transaksi
+  status: {
+    type: String,
+    enum: ['pending', 'success', 'failed', 'processing'],
+    default: 'pending'
   },
-  lastActivity: {
-    type: Date,
-    default: Date.now
+  
+  // Response dari DigiFlazz
+  provider_response: {
+    type: mongoose.Schema.Types.Mixed
+  },
+  
+  // Timestamps
+  completed_at: {
+    type: Date
   }
 }, {
-  timestamps: true
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
 });
 
-// Update lastActivity on save
-agentSchema.pre('save', function(next) {
-  this.lastActivity = new Date();
-  next();
-});
+// Static methods
+transactionSchema.statics.generateTransactionId = function() {
+  return 'TXN' + Date.now() + Math.random().toString(36).substr(2, 5).toUpperCase();
+};
 
-module.exports = mongoose.model('Agent', agentSchema);
+transactionSchema.statics.findByAgent = function(agentId) {
+  return this.find({ agent_id: agentId }).sort({ created_at: -1 });
+};
+
+module.exports = mongoose.model('Transaction', transactionSchema);

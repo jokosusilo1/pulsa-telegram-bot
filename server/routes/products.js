@@ -1,16 +1,17 @@
 const express = require('express');
 const router = express.Router();
+const {
+    getAllProducts,
+    getByCategory,
+    syncProducts,
+    getProductByCode,
+    checkBalance
+} = require('../controllers/ProductController');
 
-// Temporary route tanpa model
-router.get('/', (req, res) => {
-  res.json({ 
-    success: true,
-    message: 'Products API is working!',
-    data: [
-      { id: 1, name: 'Pulsa 5.000', price: 6000, category: 'pulsa' },
-      { id: 2, name: 'Pulsa 10.000', price: 11000, category: 'pulsa' }
-    ]
-  });
-});
+router.get('/', getAllProducts);
+router.get('/category/:category', getByCategory);
+router.get('/code/:code', getProductByCode);
+router.post('/sync', syncProducts);
+router.get('/balance', checkBalance); // **NEW: Check balance endpoint**
 
 module.exports = router;

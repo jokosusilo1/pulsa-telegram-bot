@@ -1,23 +1,34 @@
-const mongoose = require('mongoose');
+const path = require('path');
+const fs = require('fs');
 
-const connectDB = async () => {
-  try {
-    // Check if MONGODB_URI exists
-    if (!process.env.MONGODB_URI) {
-      console.log('⚠️  MONGODB_URI not set, running without database');
-      return;
+class DatabaseConfig {
+  static getConfig() {
+    const env = process.env.NODE_ENV || 'development';
+    
+    console.log(`🎯 Database Config: ${env.toUpperCase()} mode`);
+    
+    // ⚠️ FORCE PAKAI JSON UNTUK DEVELOPMENT DI TERMUX
+    const dataDir = path.join(__dirname, '../data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
     }
     
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error('❌ MongoDB connection error:', error.message);
-    console.log('⚠️  Application running without database');
+    return {
+      type: 'json',
+      path: path.join(dataDir, 'ppob.json'),
+      name: 'JSON Storage (Development)'
+    };
   }
-};
+  
+  static getStorageType() {
+    const config = this.getConfig();
+    return config.type;
+  }
+  
+  static getStorageConfig() {
+    const config = this.getConfig();
+    return config;
+  }
+}
 
-module.exports = connectDB;
+module.exports = DatabaseConfig;

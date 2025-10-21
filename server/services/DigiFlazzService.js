@@ -1,5 +1,4 @@
-
-
+// services/DigiFlazzService.js
 const axios = require('axios');
 const crypto = require('crypto');
 
@@ -8,13 +7,6 @@ class DigiFlazzService {
     this.username = process.env.DIGIFLAZZ_USERNAME;
     this.apiKey = process.env.DIGIFLAZZ_API_KEY;
     this.baseURL = 'https://api.digiflazz.com/v1';
-    this.client = axios.create({
-      baseURL: this.baseURL,
-      timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
   }
 
   generateSignature(cmd) {
@@ -25,7 +17,7 @@ class DigiFlazzService {
 
   async getPriceList() {
     try {
-      const response = await this.client.post('/price-list', {
+      const response = await axios.post(`${this.baseURL}/price-list`, {
         cmd: 'prepaid',
         username: this.username,
         sign: this.generateSignature('pricelist')
@@ -33,50 +25,39 @@ class DigiFlazzService {
 
       return response.data.data;
     } catch (error) {
-      console.error('Error fetching DigiFlazz price list:', error.response?.data || error.message);
-      throw new Error('Gagal mengambil data produk dari DigiFlazz');
-    }
-  }
-
-  async purchase(sku, customerNo, refId) {
-    try {
-      const response = await this.client.post('/transaction', {
-        username: this.username,
-        buyer_sku_code: sku,
-        customer_no: customerNo,
-        ref_id: refId,
-        sign: this.generateSignature('deposit')
-      });
-
-      const result = response.data;
-      
-      if (result.data && result.data.status === 'Gagal') {
-        throw new Error(result.data.message || 'Transaksi gagal di DigiFlazz');
-      }
-
-      return result.data;
-    } catch (error) {
-      console.error('DigiFlazz purchase error:', error.response?.data || error.message);
-      
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      }
-      
-      throw new Error('Terjadi kesalahan saat memproses transaksi di DigiFlazz');
+      console.error('Error getting DigiFlazz products:', error.response?.data || error.message);
+      throw error;
     }
   }
 
   async checkBalance() {
     try {
-      const response = await this.client.post('/cek-saldo', {
+      const response = await axios.post(`${this.baseURL}/cek-saldo`, {
         username: this.username,
-        sign: this.generateSignature('deposit')
+        sign: this.generateSignature('depo')
       });
 
       return response.data.data;
     } catch (error) {
-      console.error('Error checking DigiFlazz balance:', error);
-      throw new Error('Gagal memeriksa saldo DigiFlazz');
+      console.error('Error checking balance:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  async purchase(sku, customerNo, refId) {
+    try {
+      const response = await axios.post(`${this.baseURL}/transaction`, {
+        username: this.username,
+        buyer_sku_code: sku,
+        customer_no: customerNo,
+        ref_id: refId,
+        sign: this.generateSignature('depo')
+      });
+
+      return response.data.data;
+    } catch (error) {
+      console.error('Error purchasing:', error.response?.data || error.message);
+      throw error;
     }
   }
 }
