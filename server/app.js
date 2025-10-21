@@ -17,8 +17,7 @@ const initializeApp = async () => {
     console.log('🔗 Step 1: Connecting to database...');
     
     // 1. Connect to database FIRST
-    const MONGODB_URI = 'mongodb+srv://mustikaiman92_db_user:MKISVZkbOr7UgDoN@pulsa-bot-cluster.ojz0rhf.mongodb.net/?retryWrites=true&w=majority&appName=pulsa-bot-cluster';
-    
+    const MONGODB_URI = process.env.MONGODB_URI;
     // ⭐⭐⭐ CONNECT TO DATABASE ⭐⭐⭐
     await mongoose.connect(MONGODB_URI);
     console.log('✅ MongoDB Connected Successfully!');
