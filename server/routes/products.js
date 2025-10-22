@@ -6,7 +6,7 @@ const {
     syncProducts,
     getProductByCode,
     checkBalance
-} = require('../controllers/ProductController');
+} = require('../controllers/productController');
 
 router.get('/', getAllProducts);
 router.get('/category/:category', getByCategory);
