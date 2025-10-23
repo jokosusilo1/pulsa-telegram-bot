@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const errorHandler = require('./middleware/errorHandler');
+const { simpleAuth } = require('./middleware/simpleAuth');
 
 require('dotenv').config();
 
@@ -155,6 +156,7 @@ const setupMiddleware = () => {
 
 // **FIXED: Pisahkan setup routes ke fungsi terpisah**
 const setupRoutes = () => {
+  app.use('/api', simpleAuth);
   // Load routes
   const productsRouter = require('./routes/products');
   const categoriesRouter = require('./routes/categories');
