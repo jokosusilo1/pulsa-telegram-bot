@@ -1,17 +1,59 @@
 const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
-  code: { type: String, required: true, unique: true },
-  name: { type: String, required: true },
-  category: { type: String, required: true },
-  operator: String,
-  base_price: { type: Number, required: true },
-  selling_price: { type: Number, required: true },
-  profit: { type: Number, required: true },
-  status: { type: String, default: 'active' },
-  digiflazz_data: { type: Object } // Untuk menyimpan data original
+    name: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    code: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true
+    },
+    category: {
+        type: String,
+        required: true,
+        enum: ['Pulsa', 'Data', 'PLN', 'Voucher', 'Game'],
+        trim: true
+    },
+    price: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+    description: {
+        type: String,
+        trim: true
+    },
+    stock: {
+        type: Number,
+        default: 999
+    },
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    provider: {
+        type: String,
+        trim: true
+    },
+    denomination: {
+        type: String,
+        trim: true
+    },
+    validity: {
+        type: String,
+        trim: true
+    }
 }, {
-  timestamps: true
+    timestamps: true
 });
+
+// Index untuk pencarian
+productSchema.index({ code: 1 });
+productSchema.index({ category: 1 });
+productSchema.index({ isActive: 1 });
 
 module.exports = mongoose.model('Product', productSchema);

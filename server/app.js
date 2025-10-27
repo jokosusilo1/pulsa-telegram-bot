@@ -5,10 +5,12 @@ const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const errorHandler = require('./middleware/errorHandler');
 const { simpleAuth } = require('./middleware/simpleAuth');
+const operator = require('./routes/operators');
 
 require('dotenv').config();
 
 const app = express();
+
 
 // **FIXED: Konfigurasi Mongoose dengan error handling yang lebih baik**
 const initializeApp = async () => {
@@ -162,12 +164,14 @@ const setupRoutes = () => {
   const categoriesRouter = require('./routes/categories');
   const agentsRouter = require('./routes/agents');
   const transactionsRouter = require('./routes/transactions');
+  const operatorRouter = require('./routes/operators');
 
   // Register routes
   app.use('/api/products', productsRouter);
   app.use('/api/categories', categoriesRouter);
   app.use('/api/agents', agentsRouter);
   app.use('/api/transactions', transactionsRouter);
+  app.use('/ap/operators', operatorRouter); 
 
   // Health Check - Enhanced
   app.get('/health', (req, res) => {
@@ -221,12 +225,13 @@ const setupRoutes = () => {
       message: '🚀 Pulsa Bot API Server is running!', 
       version: '1.0.0',
       database: dbStatus === 1 ? 'connected' : 'disconnected',
-      models: ['Product', 'Transaction', 'Agent'],
+      models: ['Product', 'Transaction', 'Agent','Operator'],
       endpoints: {
         products: '/api/products',
         categories: '/api/categories', 
         agents: '/api/agents',
         transactions: '/api/transactions',
+        operators: '/api/operators',
         health: '/health',
         version: '/api/version'
       },
@@ -248,6 +253,7 @@ const setupRoutes = () => {
         '/api/categories',
         '/api/agents',
         '/api/transactions',
+        '/api/operators',
         '/health',
         '/api/version'
       ]

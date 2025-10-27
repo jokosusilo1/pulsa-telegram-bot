@@ -1,80 +1,85 @@
-// models/Agent.js
+// server/models/Agent.js
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const agentSchema = new mongoose.Schema({
-  telegram_id: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true
-  },
-  username: {
-    type: String
-  },
-  first_name: {
-    type: String,
-    required: true
-  },
-  last_name: {
-    type: String
-  },
-  phone: {
-    type: String
-  },
-  // Balance information
-  balance: {
-    type: Number,
-    default: 0
-  },
-  // Status
-  status: {
-    type: String,
-    enum: ['active', 'inactive', 'suspended'],
-    default: 'active',
-    index: true
-  },
-  // Statistics
-  statistics: {
-    total_transactions: { type: Number, default: 0 },
-    total_profit: { type: Number, default: 0 },
-    successful_transactions: { type: Number, default: 0 },
-    failed_transactions: { type: Number, default: 0 }
-  },
-  // Settings
-  settings: {
-    auto_topup: { type: Boolean, default: false },
-    low_balance_alert: { type: Number, default: 10000 }
-  }
+    name: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    phone: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true
+    },
+    email: {
+        type: String,
+        required: true, // Tambahkan required untuk registrasi
+        trim: true
+    },
+    telegramId: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+    pin: {
+        type: String,
+        required: true // Tambahkan field PIN
+    },
+    balance: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    isRegistered: {
+        type: Boolean,
+        default: false // Tambahkan status registrasi
+    },
+    registrationStep: {
+        type: String,
+        default: 'phone' // Tambahkan step registrasi
+    },
+    role: {
+        type: String,
+        default: 'agent',
+        enum: ['user', 'agent', 'admin']
+    }
 }, {
-  timestamps: true
+    timestamps: true
 });
 
-// Instance methods
-agentSchema.methods.updateStatistics = function(transaction) {
-  this.statistics.total_transactions += 1;
-  
-  if (transaction.status === 'success') {
-    this.statistics.successful_transactions += 1;
-    this.statistics.total_profit += transaction.profit;
-  } else if (transaction.status === 'failed') {
-    this.statistics.failed_transactions += 1;
-  }
-  
-  return this.save();
+// Hash PIN sebelum menyimpan
+agentSchema.pre('save', async function(next) {
+    if (this.isModified('pin')) {
+        try {
+            const saltRounds = 10;
+            this.pin = await bcrypt.hash(this.pin, saltRounds);
+        } catch (error) {
+            return next(error);
+        }
+    }
+    next();
+});
+
+// Method untuk verifikasi PIN
+agentSchema.methods.verifyPin = async function(candidatePin) {
+    try {
+        return await bcrypt.compare(candidatePin, this.pin);
+    } catch (error) {
+        console.error('Error verifying PIN:', error);
+        return false;
+    }
 };
 
-agentSchema.methods.hasSufficientBalance = function(amount) {
-  return this.balance >= amount;
-};
-
-agentSchema.methods.deductBalance = function(amount) {
-  this.balance -= amount;
-  return this.save();
-};
-
-agentSchema.methods.addBalance = function(amount) {
-  this.balance += amount;
-  return this.save();
-};
+// Index untuk pencarian
+agentSchema.index({ phone: 1 });
+agentSchema.index({ telegramId: 1 });
+agentSchema.index({ isActive: 1 });
 
 module.exports = mongoose.model('Agent', agentSchema);
