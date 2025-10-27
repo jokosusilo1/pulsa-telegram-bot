@@ -1,9 +1,12 @@
-// Load environment variables
 require('dotenv').config();
 
 module.exports = {
   BOT_TOKEN: process.env.BOT_TOKEN,
   API_BASE_URL: process.env.API_BASE_URL || 'https://pulsa-api.onrender.com',
+  
+  // ⭐⭐⭐ TAMBAHKAN INI ⭐⭐⭐
+  API_KEY: process.env.API_KEY_BOT, // API Key untuk authentication
+  
   NODE_ENV: process.env.NODE_ENV || 'development',
   
   // Digiflazz Config

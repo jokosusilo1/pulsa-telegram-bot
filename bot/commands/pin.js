@@ -1,53 +1,17 @@
-const agentStorage = new Map();
-
 module.exports = (bot) => {
-    console.log("🔄 Loading PIN management commands...");
+    console.log('🔄 Loading pin command...');
 
-    // Command untuk ganti PIN
-    bot.onText(/\/gantipin/, async (msg) => {
+    bot.onText(/\/pin|🔐 GANTI PIN/, async (msg) => {
         const chatId = msg.chat.id;
-        const userId = msg.from.id.toString();
         
-        try {
-            const agent = agentStorage.get(userId);
-            if (!agent) {
-                return bot.sendMessage(chatId, '❌ Anda belum terdaftar sebagai agent.');
-            }
+        const pinMessage = `🔐 GANTI PIN
 
-            // Start PIN change process
-            const pinState = {
-                step: 'current_pin',
-                agentId: userId
-            };
-            // Simpan state di storage terpisah atau extend registrationState
+Fitur ganti PIN sedang dalam pengembangan.
 
-            bot.sendMessage(chatId, 
-                '🔐 **GANTI PIN**\n\n' +
-                'Masukkan PIN lama Anda:'
-            );
+Untuk sementara, hubungi admin untuk reset PIN:
+📱 08xx-xxxx-xxxx
+👨‍💼 @admin_username`;
 
-        } catch (error) {
-            console.error('Error in /gantipin:', error);
-            bot.sendMessage(chatId, '❌ Gagal memproses perubahan PIN.');
-        }
+        bot.sendMessage(chatId, pinMessage);
     });
-
-    // Handler untuk tombol GANTI PIN
-    bot.on('message', async (msg) => {
-        if (!msg.text) return;
-        
-        const chatId = msg.chat.id;
-        const text = msg.text;
-
-        if (text === '🔐 GANTI PIN') {
-            bot.sendMessage(chatId, 
-                '🔐 **GANTI PIN**\n\n' +
-                'Untuk keamanan, gunakan command:\n' +
-                '`/gantipin`\n\n' +
-                'Anda akan diminta memasukkan PIN lama dan PIN baru.'
-            );
-        }
-    });
-
-    console.log("✅ PIN management commands loaded");
 };

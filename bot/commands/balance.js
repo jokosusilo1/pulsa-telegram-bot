@@ -1,191 +1,106 @@
-// ✅ PATH YANG BENAR - dari commands/balance.js ke server/services/StorageService
-const path = require('path');
-const StorageService = require(path.join(__dirname, '..', '..', 'server', 'services', 'StorageService'));
-module.exports = (bot) => {
-    console.log("🔄 Loading /balance command...");
+const ApiService = require('../../server/services/ApiService');
+const AgentService = require('../services/AgentService');
 
-    // Command: /balance
-    bot.onText(/\/balance/, async (msg) => {
-        const chatId = msg.chat.id;
-        const userId = msg.from.id.toString();
+const apiService = new ApiService();
+
+// Fungsi untuk menampilkan balance yang bisa dipanggil oleh command dan callback
+async function showBalance(bot, chatId, user = null) {
+    try {
+        // Dapatkan data agent jika user tersedia
+        let agentData = null;
+        if (user) {
+            agentData = await AgentService.getAgent(user.id.toString());
+        }
+
+        const result = await apiService.getBalance();
         
-        try {
-            // Dapatkan data agent
-            const agent = await StorageService.getAgent(userId);
+        if (result.success) {
+            let balanceMessage = `💰 <b>INFORMASI SALDO</b>\n\n`;
             
-            if (!agent) {
-                return bot.sendMessage(chatId, 
-                    '❌ Anda belum terdaftar sebagai agent.\n' +
-                    'Gunakan /start untuk mendaftar terlebih dahulu.'
-                );
+            // Tambahkan info agent jika ada
+            if (agentData) {
+                balanceMessage += `👤 <b>Agent:</b> ${agentData.name}\n` +
+                                `📞 <b>Telepon:</b> ${agentData.phone}\n\n`;
             }
-
-            const balanceMessage = `
-💼 **INFO SALDO AGENT**
-
-👤 **Nama:** ${agent.name}
-🆔 **Agent ID:** ${agent.agentId || userId}
-💰 **Saldo:** Rp ${agent.balance.toLocaleString('id-ID')}
-📊 **Status:** ${agent.status || 'Aktif'}
-
-💡 **Fitur:**
-• Deposit saldo
-• Cek riwayat transaksi
-• Tarik saldo
-            `;
+            
+            balanceMessage += `💵 <b>Saldo Deposit:</b> Rp ${result.data.balance?.toLocaleString('id-ID') || '0'}\n` +
+                            `🏦 <b>Mata Uang:</b> ${result.data.currency || 'IDR'}\n\n` +
+                            `📊 <b>Status:</b> ${result.data.balance > 0 ? '✅ Aktif' : '⚠️ Saldo Habis'}\n\n` +
+                            `💡 <b>Tips:</b> Lakukan deposit untuk terus bertransaksi.`;
 
             const keyboard = {
                 reply_markup: {
-                    keyboard: [
-                        ["💰 DEPOSIT", "📊 RIWAYAT"],
-                        ["💳 TARIK SALDO", "🏠 MENU UTAMA"]
-                    ],
-                    resize_keyboard: true,
-                    one_time_keyboard: false
+                    inline_keyboard: [
+                        [
+                            { text: '💳 DEPOSIT SEKARANG', callback_data: 'show_deposit' },
+                            { text: '📋 RIWAYAT', callback_data: 'show_history' }
+                        ],
+                        [
+                            { text: '⬅️ KEMBALI KE MENU', callback_data: 'show_main_menu' }
+                        ]
+                    ]
                 }
             };
 
-            bot.sendMessage(chatId, balanceMessage, { 
-                parse_mode: 'Markdown',
+            await bot.sendMessage(chatId, balanceMessage, {
+                parse_mode: 'HTML',
                 ...keyboard
             });
-
-        } catch (error) {
-            console.error('Error in /balance:', error);
-            bot.sendMessage(chatId, '❌ Gagal mengambil informasi saldo.');
+            
+        } else {
+            const errorMessage = `❌ <b>Gagal mengambil informasi saldo</b>\n\n` +
+                               `Silakan coba lagi atau hubungi admin.`;
+            
+            await bot.sendMessage(chatId, errorMessage, {
+                parse_mode: 'HTML',
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            { text: '🔄 COBA LAGI', callback_data: 'check_balance' },
+                            { text: '📞 HUBUNGI ADMIN', callback_data: 'show_contact' }
+                        ]
+                    ]
+                }
+            });
         }
-    });
-
-    // Handler untuk tombol balance
-    bot.on('message', async (msg) => {
-        if (!msg.text) return;
+    } catch (error) {
+        console.error('Error getting balance:', error);
         
+        const errorMessage = `❌ <b>Terjadi Kesalahan</b>\n\n` +
+                           `Gagal mengambil informasi saldo.\n\n` +
+                           `💡 <b>Solusi:</b>\n` +
+                           `• Periksa koneksi internet\n` +
+                           `• Coba lagi beberapa saat\n` +
+                           `• Hubungi admin jika masalah berlanjut`;
+
+        await bot.sendMessage(chatId, errorMessage, {
+            parse_mode: 'HTML',
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        { text: '🔄 COBA LAGI', callback_data: 'check_balance' },
+                        { text: '📞 HUBUNGI ADMIN', callback_data: 'show_contact' }
+                    ],
+                    [
+                        { text: '⬅️ KEMBALI KE MENU', callback_data: 'show_main_menu' }
+                    ]
+                ]
+            }
+        });
+    }
+}
+
+// Handler untuk command text (/balance)
+const balanceCommand = (bot) => {
+    console.log('🔄 Loading balance command...');
+
+    bot.onText(/\/balance|💰 CEK SALDO/, async (msg) => {
         const chatId = msg.chat.id;
-        const userId = msg.from.id.toString();
-        const text = msg.text;
-
-        try {
-            if (text === '💰 DEPOSIT') {
-                await showDepositInstructions(bot, chatId);
-            }
-            else if (text === '📊 RIWAYAT') {
-                await showTransactionHistory(bot, chatId, userId);
-            }
-            else if (text === '💳 TARIK SALDO') {
-                await showWithdrawalInstructions(bot, chatId, userId);
-            }
-        } catch (error) {
-            console.error('Error in balance button:', error);
-        }
+        const user = msg.from;
+        await showBalance(bot, chatId, user);
     });
-
-    console.log("✅ /balance command loaded");
 };
 
-// Helper functions
-async function showDepositInstructions(bot, chatId) {
-    const message = `
-💰 **DEPOSIT SALDO**
-
-Untuk deposit saldo, silakan transfer ke:
-
-🏦 **Bank:** BCA
-📞 **Rekening:** 123-456-7890
-👤 **Atas Nama:** NAMA ADMIN
-
-💰 **Bank:** BRI  
-📞 **Rekening:** 098-765-4321
-👤 **Atas Nama:** NAMA ADMIN
-
-**Setelah transfer:**
-1. Kirim bukti transfer ke admin
-2. Saldo akan ditambahkan dalam 5-10 menit
-3. Cek saldo dengan /balance
-
-📞 **Admin:** @username_admin
-    `;
-
-    bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
-}
-
-async function showTransactionHistory(bot, chatId, userId) {
-    try {
-        // Dapatkan riwayat transaksi dari StorageService
-        const transactions = await StorageService.getAgentTransactions(userId);
-        
-        if (!transactions || transactions.length === 0) {
-            return bot.sendMessage(chatId, '📭 Tidak ada riwayat transaksi.');
-        }
-
-        let message = '📊 **RIWAYAT TRANSAKSI**\n\n';
-        
-        transactions.slice(0, 10).forEach((transaction, index) => {
-            const date = new Date(transaction.date).toLocaleDateString('id-ID');
-            const type = transaction.type === 'deposit' ? '💰 Deposit' : '💳 Penarikan';
-            const status = transaction.status === 'success' ? '✅' : '⏳';
-            
-            message += `${index + 1}. ${type} ${status}\n`;
-            message += `   Rp ${transaction.amount.toLocaleString('id-ID')}\n`;
-            message += `   ${date}\n\n`;
-        });
-
-        if (transactions.length > 10) {
-            message += `... dan ${transactions.length - 10} transaksi lainnya`;
-        }
-
-        bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
-
-    } catch (error) {
-        console.error('Error getting transaction history:', error);
-        bot.sendMessage(chatId, '❌ Gagal mengambil riwayat transaksi.');
-    }
-}
-
-async function showWithdrawalInstructions(bot, chatId, userId) {
-    try {
-        const agent = await StorageService.getAgent(userId);
-        
-        if (!agent) {
-            return bot.sendMessage(chatId, '❌ Agent tidak ditemukan.');
-        }
-
-        const message = `
-💳 **PENARIKAN SALDO**
-
-💰 **Saldo Tersedia:** Rp ${agent.balance.toLocaleString('id-ID')}
-
-📋 **Syarat Penarikan:**
-• Minimal penarikan: Rp 10.000
-• Maksimal penarikan: Rp 5.000.000 per hari
-• Proses: 1-2 jam kerja
-
-💼 **Untuk penarikan:**
-1. Pastikan saldo mencukupi
-2. Kirim permintaan ke admin
-3. Sertakan nomor rekening tujuan
-
-📞 **Hubungi Admin:** @username_admin
-
-⚠️ **Pastikan data rekening benar!**
-        `;
-
-        const keyboard = {
-            reply_markup: {
-                keyboard: [
-                    ["💰 DEPOSIT", "📊 RIWAYAT"],
-                    ["🏠 MENU UTAMA"]
-                ],
-                resize_keyboard: true
-            }
-        };
-
-        bot.sendMessage(chatId, message, { 
-            parse_mode: 'Markdown',
-            ...keyboard
-        });
-
-    } catch (error) {
-        console.error('Error in withdrawal instructions:', error);
-        bot.sendMessage(chatId, '❌ Gagal menampilkan info penarikan.');
-    }
-}
+// Export command handler dan fungsi showBalance
+module.exports = balanceCommand;
+module.exports.showBalance = showBalance;
