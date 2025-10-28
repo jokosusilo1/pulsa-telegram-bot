@@ -1,15 +1,17 @@
-// services/AgentService.js - KOREKSI
-const config = require('../config');
+// bot/services/AgentService.js - VERSION FINAL
+const environment = process.env.NODE_ENV || 'development';
+
+console.log('🔧 Initializing AgentService in bot/services/...');
+console.log('🌍 Environment:', environment);
 
 let SelectedAgentService;
 
-// Pilih service berdasarkan environment
-if (config.environment === 'production') {
+if (environment === 'production') {
     try {
         SelectedAgentService = require('./AgentServiceMongo');
         console.log('🚀 Using MongoDB for AgentService (PRODUCTION)');
     } catch (error) {
-        console.error('❌ MongoDB not available, falling back to JSON:', error);
+        console.error('❌ MongoDB service failed, falling back to JSON:', error.message);
         SelectedAgentService = require('./AgentServiceJSON');
     }
 } else {
@@ -17,25 +19,22 @@ if (config.environment === 'production') {
     console.log('📁 Using JSON Storage for AgentService (DEVELOPMENT)');
 }
 
-// Test service on startup - DIPERBAIKI
+// Test service on startup
 async function initializeService() {
     try {
         console.log('🧪 Testing AgentService...');
-        
-        // Test basic operations - gunakan method yang tersedia
         const agents = await SelectedAgentService.getAllAgents();
-        console.log(`✅ AgentService test passed: ${agents.length} agents found`);
-        
+        console.log(`✅ AgentService initialized: ${agents.length} agents found`);
     } catch (error) {
-        console.error('❌ AgentService test failed:', error);
-        // Jangan throw error, biarkan service tetap berjalan
+        console.error('❌ AgentService initialization test failed:', error.message);
+        // Don't throw, let service continue
     }
 }
 
 // Initialize immediately
 initializeService();
 
-// ✅ KOREKSI: Export methods langsung tanpa wrapper function
+// Export methods
 module.exports = {
     checkAgentRegistration: SelectedAgentService.checkAgentRegistration,
     getAgent: SelectedAgentService.getAgent,
@@ -47,6 +46,6 @@ module.exports = {
     testFileOperations: SelectedAgentService.testFileOperations,
     
     // Export untuk debugging
-    _serviceType: config.environment === 'production' ? 'MongoDB' : 'JSON',
+    _serviceType: environment === 'production' ? 'MongoDB' : 'JSON',
     _selectedService: SelectedAgentService
 };
