@@ -1,180 +1,211 @@
-const AgentStorage = require('../commands/storage/AgentStorage');
+// services/AgentServiceJSON.js - PURE FUNCTIONS
+const fs = require('fs').promises;
+const path = require('path');
 
-class AgentServiceJSON {
-    static async checkAgentRegistration(telegramId) {
+const dataFile = path.join(__dirname, '../../data/agents.json');
+
+// Helper functions
+async function ensureDataFile() {
+    try {
+        const dataDir = path.dirname(dataFile);
+        await fs.mkdir(dataDir, { recursive: true });
+        
         try {
-            console.log(`🔍 [AgentStorage] Checking registration for: ${telegramId}`);
-            
-            const agent = AgentStorage.getAgent(telegramId);
-            const isRegistered = agent && agent.isRegistered;
-            
-            console.log(`📊 [AgentStorage] Registration status: ${isRegistered}`);
-            return isRegistered;
-            
-        } catch (error) {
-            console.error('❌ [AgentStorage] Error checking registration:', error.message);
-            return false;
+            await fs.access(dataFile);
+        } catch {
+            await fs.writeFile(dataFile, JSON.stringify([]));
+            console.log('📁 Created new agents.json file');
         }
-    }
-
-    static async getAgent(telegramId) {
-        try {
-            console.log(`🔍 [AgentStorage] Getting agent: ${telegramId}`);
-            
-            const agent = AgentStorage.getAgent(telegramId);
-            
-            if (agent) {
-                console.log(`✅ [AgentStorage] Agent found: ${agent.name}`);
-            } else {
-                console.log(`❌ [AgentStorage] Agent not found: ${telegramId}`);
-            }
-            
-            return agent;
-        } catch (error) {
-            console.error('❌ [AgentStorage] Error getting agent:', error.message);
-            return null;
-        }
-    }
-
-    static async createAgent(agentData) {
-        try {
-            console.log('📝 [AgentStorage] Creating agent:', agentData);
-            
-            const telegramId = agentData.telegramId;
-            
-            // Cek duplikat
-            if (AgentStorage.getAgent(telegramId)) {
-                throw new Error(`Agent with Telegram ID ${telegramId} already exists`);
-            }
-            
-            // Buat agent baru
-            const newAgent = {
-                ...agentData,
-                isRegistered: true,
-                registrationStep: 'completed',
-                balance: agentData.balance || 0,
-                registeredAt: new Date().toISOString(),
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            };
-            
-            AgentStorage.saveAgent(telegramId, newAgent);
-            
-            console.log('✅ [AgentStorage] Agent created successfully:', newAgent.name);
-            return newAgent;
-            
-        } catch (error) {
-            console.error('❌ [AgentStorage] Error creating agent:', error.message);
-            throw error;
-        }
-    }
-
-    static async updateRegistrationStep(telegramId, step) {
-        try {
-            const agent = AgentStorage.getAgent(telegramId);
-            if (agent) {
-                agent.registrationStep = step;
-                agent.updatedAt = new Date().toISOString();
-                AgentStorage.saveAgent(telegramId, agent);
-                console.log(`✅ [AgentStorage] Updated step to ${step} for: ${telegramId}`);
-            }
-            return agent;
-        } catch (error) {
-            console.error('❌ [AgentStorage] Error updating registration step:', error.message);
-            throw error;
-        }
-    }
-
-    static async saveRegistrationData(telegramId, data) {
-        try {
-            const agent = AgentStorage.getAgent(telegramId);
-            if (!agent) {
-                throw new Error('Agent not found');
-            }
-
-            // Update data
-            Object.keys(data).forEach(key => {
-                if (data[key] !== undefined && data[key] !== null) {
-                    agent[key] = data[key];
-                }
-            });
-            
-            agent.updatedAt = new Date().toISOString();
-            AgentStorage.saveAgent(telegramId, agent);
-            
-            console.log(`✅ [AgentStorage] Saved registration data for: ${telegramId}`);
-            return agent;
-        } catch (error) {
-            console.error('❌ [AgentStorage] Error saving registration data:', error.message);
-            throw error;
-        }
-    }
-
-    static async completeRegistration(telegramId) {
-        try {
-            const agent = AgentStorage.getAgent(telegramId);
-            if (agent) {
-                agent.isRegistered = true;
-                agent.registrationStep = 'completed';
-                agent.updatedAt = new Date().toISOString();
-                AgentStorage.saveAgent(telegramId, agent);
-                console.log(`✅ [AgentStorage] Completed registration for: ${telegramId}`);
-            }
-            return agent;
-        } catch (error) {
-            console.error('❌ [AgentStorage] Error completing registration:', error.message);
-            throw error;
-        }
-    }
-
-    static async verifyPin(telegramId, candidatePin) {
-        try {
-            const agent = AgentStorage.getAgent(telegramId);
-            
-            if (!agent || !agent.pin) {
-                return false;
-            }
-            
-            // Simple PIN comparison
-            const isMatch = agent.pin === candidatePin;
-            console.log(`🔐 [AgentStorage] PIN verification for ${telegramId}: ${isMatch}`);
-            return isMatch;
-        } catch (error) {
-            console.error('❌ [AgentStorage] Error verifying PIN:', error.message);
-            return false;
-        }
-    }
-
-    static async updateBalance(telegramId, amount) {
-        try {
-            const agent = AgentStorage.getAgent(telegramId);
-            if (agent) {
-                agent.balance = (agent.balance || 0) + amount;
-                agent.updatedAt = new Date().toISOString();
-                AgentStorage.saveAgent(telegramId, agent);
-                console.log(`💰 [AgentStorage] Updated balance for ${telegramId}: ${agent.balance}`);
-            }
-            return agent;
-        } catch (error) {
-            console.error('❌ [AgentStorage] Error updating balance:', error.message);
-            throw error;
-        }
-    }
-
-    // Helper methods untuk development
-    static async getAllAgents() {
-        return AgentStorage.getAllAgents();
-    }
-
-    static async getAgentCount() {
-        return AgentStorage.getAgentCount();
-    }
-
-    static async clearAgents() {
-        // Note: AgentStorage tidak punya clear method, jadi kita buat manual
-        // Ini untuk testing purposes saja
-        console.log('⚠️ [AgentStorage] Clear method not available - data persists in memory');
+    } catch (error) {
+        console.error('❌ Error ensuring data file:', error);
+        throw error;
     }
 }
 
-module.exports = AgentServiceJSON;
+async function loadAgents() {
+    try {
+        await ensureDataFile();
+        const data = await fs.readFile(dataFile, 'utf8');
+        const agents = data.trim() ? JSON.parse(data) : [];
+        console.log(`📊 Loaded ${agents.length} agents from JSON`);
+        return agents;
+    } catch (error) {
+        console.error('❌ Error loading agents:', error);
+        return [];
+    }
+}
+
+async function saveAgents(agents) {
+    try {
+        await ensureDataFile();
+        await fs.writeFile(dataFile, JSON.stringify(agents, null, 2));
+        console.log(`💾 Saved ${agents.length} agents to JSON`);
+        return true;
+    } catch (error) {
+        console.error('❌ Error saving agents:', error);
+        throw error;
+    }
+}
+
+// Main functions
+async function checkAgentRegistration(telegramId) {
+    try {
+        console.log(`🔍 Checking registration for: ${telegramId}`);
+        const agents = await loadAgents();
+        const agent = agents.find(a => a.telegramId === telegramId || a.userId === telegramId);
+        const isRegistered = !!(agent && agent.isRegistered);
+        console.log(`📊 Registration status: ${isRegistered}`);
+        return isRegistered;
+    } catch (error) {
+        console.error('❌ Error checking registration:', error);
+        return false;
+    }
+}
+
+async function getAgent(telegramId) {
+    try {
+        console.log(`🔍 Getting agent: ${telegramId}`);
+        const agents = await loadAgents();
+        const agent = agents.find(a => a.telegramId === telegramId || a.userId === telegramId);
+        
+        if (agent) {
+            console.log(`✅ Agent found: ${agent.name}`);
+        } else {
+            console.log(`❌ Agent not found: ${telegramId}`);
+        }
+        
+        return agent || null;
+    } catch (error) {
+        console.error('❌ Error getting agent:', error);
+        return null;
+    }
+}
+
+async function createAgent(agentData) {
+    try {
+        console.log('📝 Creating agent:', agentData);
+        
+        const agents = await loadAgents();
+        const telegramId = agentData.telegramId;
+        
+        if (!telegramId) {
+            throw new Error('Missing telegramId');
+        }
+        
+        // Check duplicate
+        const existingAgent = agents.find(a => a.telegramId === telegramId);
+        if (existingAgent) {
+            console.log(`⚠️ Agent already exists: ${telegramId}`);
+            throw new Error('Agent already exists');
+        }
+        
+        // Create new agent
+        const newAgent = {
+            telegramId: telegramId,
+            userId: telegramId,
+            name: agentData.name,
+            phone: agentData.phone,
+            email: agentData.email,
+            pin: agentData.pin,
+            username: agentData.username,
+            role: 'agent',
+            balance: 0,
+            isRegistered: true,
+            isActive: true,
+            registeredAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        agents.push(newAgent);
+        await saveAgents(agents);
+        
+        console.log(`✅ Agent created successfully: ${newAgent.name}`);
+        return newAgent;
+        
+    } catch (error) {
+        console.error('❌ Error creating agent:', error);
+        throw error;
+    }
+}
+
+async function getAllAgents() {
+    try {
+        return await loadAgents();
+    } catch (error) {
+        console.error('❌ Error getting all agents:', error);
+        return [];
+    }
+}
+
+async function getAgentCount() {
+    try {
+        const agents = await loadAgents();
+        return agents.length;
+    } catch (error) {
+        console.error('❌ Error getting agent count:', error);
+        return 0;
+    }
+}
+
+async function debugData() {
+    try {
+        const agents = await loadAgents();
+        console.log('🔍 DEBUG DATA - Total agents:', agents.length);
+        
+        if (agents.length === 0) {
+            console.log('📭 No agents found');
+        } else {
+            agents.forEach((agent, index) => {
+                console.log(`👤 Agent ${index + 1}:`, {
+                    telegramId: agent.telegramId,
+                    name: agent.name,
+                    phone: agent.phone,
+                    email: agent.email,
+                    isRegistered: agent.isRegistered,
+                    balance: agent.balance
+                });
+            });
+        }
+        
+        return agents;
+    } catch (error) {
+        console.error('❌ Error debugging data:', error);
+        return [];
+    }
+}
+
+async function clearAgents() {
+    try {
+        await saveAgents([]);
+        console.log('✅ Cleared all agents');
+    } catch (error) {
+        console.error('❌ Error clearing agents:', error);
+        throw error;
+    }
+}
+
+async function testFileOperations() {
+    try {
+        console.log('🧪 Testing file operations...');
+        const agents = await loadAgents();
+        await saveAgents(agents);
+        console.log('✅ File operations test passed');
+        return true;
+    } catch (error) {
+        console.error('❌ File operations test failed:', error);
+        return false;
+    }
+}
+
+// Export semua functions
+module.exports = {
+    checkAgentRegistration,
+    getAgent,
+    createAgent,
+    getAllAgents,
+    getAgentCount,
+    debugData,
+    clearAgents,
+    testFileOperations
+};
