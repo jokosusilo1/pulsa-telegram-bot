@@ -1,52 +1,44 @@
-// bot/services/AgentServiceMongo.js - PATH YANG BENAR
+// bot/services/AgentServiceMongo.js - PATH FIXED
 const path = require('path');
 
 console.log('📁 Current working directory:', process.cwd());
-console.log('📁 Current file location:', __dirname);
+console.log('📁 Current file location (__dirname):', __dirname);
 
 let Agent;
 let modelPath;
 
-// ✅ PATH YANG BENAR UNTUK bot/services/ ke server/models/
-const possiblePaths = [
-    // Dari bot/services/ ke server/models/ (naik 1 level ke root, lalu masuk server/models)
-    '../server/models/Agent',
-    // Absolute path
-    path.join(process.cwd(), 'server', 'models', 'Agent'),
-    // Dari bot/services directory
-    path.join(__dirname, '..', '..', 'server', 'models', 'Agent')
-];
+// ✅ GUNAKAN ABSOLUTE PATH YANG SUDAH TERBUKTI BEKERJA
+const absolutePath = path.join(process.cwd(), 'server', 'models', 'Agent');
+console.log('🔍 Absolute path to Agent model:', absolutePath);
 
-console.log('🔍 Attempting to load Agent model from possible paths:');
-for (const tryPath of possiblePaths) {
-    try {
-        console.log(`   Trying: ${tryPath}`);
-        // Clear cache dulu
-        delete require.cache[require.resolve(tryPath)];
-        Agent = require(tryPath);
-        modelPath = tryPath;
-        console.log(`   ✅ SUCCESS: Agent model loaded from: ${tryPath}`);
-        break;
-    } catch (error) {
-        console.log(`   ❌ Failed: ${error.message}`);
-    }
-}
-
-if (!Agent) {
-    console.error('💥 CRITICAL: Could not load Agent model from any path!');
-    console.log('📋 Available paths tried:', possiblePaths);
+try {
+    // Clear cache dulu
+    delete require.cache[require.resolve(absolutePath)];
+    Agent = require(absolutePath);
+    modelPath = absolutePath;
+    console.log('✅ SUCCESS: Agent model loaded from absolute path');
+} catch (error) {
+    console.error('💥 CRITICAL: Failed to load Agent model:', error.message);
+    console.error('Full error:', error);
     
     // Fallback untuk prevent crash
     class FallbackAgentService {
         static async createAgent(agentData) {
-            throw new Error(`Agent model not found. Paths tried: ${possiblePaths.join(', ')}`);
+            throw new Error(`Agent model not found. Tried: ${absolutePath}`);
         }
         static async findByTelegramIdOrPhone() { return null; }
         static async getAllAgents() { return []; }
         static async getAgentCount() { return 0; }
         static async checkAgentRegistration() { return false; }
         static async getAgent() { return null; }
-        static async debugData() { return { error: 'Agent model not loaded' }; }
+        static async debugData() { 
+            return { 
+                error: 'Agent model not loaded',
+                triedPath: absolutePath,
+                currentDir: process.cwd(),
+                serviceDir: __dirname
+            }; 
+        }
     }
     
     module.exports = FallbackAgentService;
@@ -76,6 +68,7 @@ class AgentServiceMongo {
             }
 
             // ✅ CREATE AND SAVE AGENT
+            console.log('💾 Saving to MongoDB...');
             const agent = new Agent(cleanAgentData);
             const savedAgent = await agent.save();
             
@@ -86,6 +79,7 @@ class AgentServiceMongo {
             console.error('❌ AgentServiceMongo.createAgent Error:');
             console.error('Error name:', error.name);
             console.error('Error message:', error.message);
+            console.error('Error code:', error.code);
             
             if (error.name === 'ValidationError') {
                 console.error('📋 MongoDB Validation Errors:');
@@ -95,7 +89,7 @@ class AgentServiceMongo {
             }
             
             if (error.code === 11000) {
-                console.error('🔑 Duplicate key error:', error.keyPattern);
+                console.error('🔑 Duplicate key error pattern:', error.keyPattern);
             }
             
             throw error;
@@ -104,12 +98,15 @@ class AgentServiceMongo {
 
     static async findByTelegramIdOrPhone(telegramId, phone) {
         try {
-            return await Agent.findOne({
+            console.log(`🔍 Searching agent - Telegram: ${telegramId}, Phone: ${phone}`);
+            const agent = await Agent.findOne({
                 $or: [
                     { telegramId: telegramId },
                     { phone: phone }
                 ]
             });
+            console.log(`🔍 Search result: ${agent ? 'FOUND' : 'NOT FOUND'}`);
+            return agent;
         } catch (error) {
             console.error('AgentServiceMongo.findByTelegramIdOrPhone Error:', error);
             return null;
@@ -157,7 +154,12 @@ class AgentServiceMongo {
         try {
             const count = await Agent.countDocuments();
             const agents = await Agent.find({}).limit(3);
-            return { count, sample: agents };
+            return { 
+                count, 
+                sample: agents,
+                modelPath: modelPath,
+                currentDir: process.cwd()
+            };
         } catch (error) {
             return { error: error.message };
         }
